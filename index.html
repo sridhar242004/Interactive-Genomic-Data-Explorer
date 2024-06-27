@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Genomic Data Explorer</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Tailwind CSS (for custom styles) -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        /* Custom styles */
+        .gene-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            font-size: 14px;
+        }
+
+        .tooltip.active {
+            opacity: 1;
+        }
+
+        .zoom-box {
+            position: absolute;
+            border: 2px solid #3182ce;
+            background-color: rgba(49, 130, 206, 0.1);
+            pointer-events: none;
+        }
+
+        #threejs-container {
+            width: 100%;
+            height: 500px;
+            position: relative;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100">
+
+    <!-- Header -->
+    <header class="bg-blue-500 text-white py-4 px-6">
+        <h1 class="text-3xl font-bold">Genomic Data Explorer</h1>
+    </header>
+
+    <!-- Main content -->
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <!-- Sidebar -->
+            <aside class="col-lg-3 bg-gray-200 p-4">
+                <h2 class="text-lg font-semibold mb-4">Filters</h2>
+                <!-- File upload -->
+                <input type="file" id="file-upload" class="form-control mb-4">
+                <!-- Uploaded data display -->
+                <div class="mt-4">
+                    <h3 class="text-lg font-semibold mb-2">Uploaded Data:</h3>
+                    <ul id="gene-list" class="gene-list list-unstyled"></ul>
+                    <div id="gender-result" class="mt-4 text-lg font-semibold"></div>
+                </div>
+            </aside>
+
+            <!-- Main content area -->
+            <main class="col-lg-9 p-4">
+                <!-- Genomic visualizations -->
+                <h2 class="text-lg font-semibold mb-4">Genomic Visualizations</h2>
+                <div id="visualization-area" class="bg-white p-4 rounded shadow-md relative">
+                    <!-- D3.js SVG container -->
+                    <svg id="svg-container"></svg>
+                    <!-- Three.js DNA structure container -->
+                    <div id="threejs-container"></div>
+                    <!-- Tooltip for D3.js -->
+                    <div id="tooltip" class="tooltip"></div>
+                    <!-- Zoom box for D3.js -->
+                    <div id="zoom-box" class="zoom-box hidden"></div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-300 text-gray-700 text-center py-2 mt-4">
+        &copy; 2024 Genomic Data Explorer
+    </footer>
+
+    <!-- JavaScript libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/d3@7.0.0/dist/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.8.335/pdf.min.js"></script>
+    <script>
+        let genomicData = []; // Global variable to hold genomic data
+
+        // Function to handle JSON file upload
+        function handleJSONFile(file) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    genomicData = JSON.parse(e.target.result);
+                    renderGenomicVisualization(genomicData);
+                    displayUploadedData('JSON Data');
+                    renderDNA3DStructure(genomicData);
+                    determineGender(genomicData);
+                } catch (error) {
+                    console.error('Error parsing JSON file:', error);
+                    alert('Invalid JSON file. Please upload a valid JSON file.');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Function to handle PDF file upload and extract genomic data
+        function handlePDFFile(file) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(e.target.result) });
+                loadingTask.promise.then(pdf => {
+                    let extractedData = [];
+                    let pagePromises = [];
+
+                    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                        pagePromises.push(
+                            pdf.getPage(pageNum).then(page => {
+                                return page.getTextContent().then(textContent => {
+                                    let textItems = textContent.items;
+                                    for (let item of textItems) {
+                                        let text = item.str;
+                                        if (text.includes('gene')) { // Basic parsing logic
+                                            let parts = text.split(':');
+                                            if (parts.length === 2) {
+                                                let [key, value] = parts.map(part => part.trim());
+                                                if (key && value) {
+                                                    extractedData.push({ gene: key, value: parseFloat(value) });
+                                                }
+                                            }
+                                        }
+                                    }
+                                });
+                            })
+                        );
+                    }
+
+                    Promise.all(pagePromises).then(() => {
+                        if (extractedData.length > 0) {
+                            genomicData = extractedData;
+                            renderGenomicVisualization(genomicData);
+                            displayUploadedData('PDF Data');
+                            renderDNA3DStructure(genomicData);
+                            determineGender(genomicData);
+                        } else {
+                            alert('Error extracting data from PDF. Please try again.');
+                        }
+                    });
+                }).catch(error => {
+                    console.error('Error loading PDF:', error);
+                    alert('Error extracting data from PDF. Please try again.');
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // Function to render genomic visualization using D3.js
+        function renderGenomicVisualization(data) {
+            const margin = { top: 20, right: 20, bottom: 50, left: 50 };
+            const width = 600 - margin.left - margin.right;
+            const height = 400 - margin.top - margin.bottom;
+
+            const svg = d3.select("#svg-container")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom);
+
+            const x = d3.scaleBand()
+                .domain(data.map(d => d.gene))
+                .range([margin.left, width - margin.right])
+                .padding(0.1);
+
+            const y = d3.scaleLinear()
+                .domain([0, d3.max(data, d => d.value)])
+                .nice()
+                .range([height - margin.bottom, margin.top]);
+
+            svg.selectAll("rect")
+                .data(data)
+                .join("rect")
+                .attr("x", d => x(d.gene))
+                .attr("y", d => y(d.value))
+                .attr("width", x.bandwidth())
+                .attr("height", d => height - margin.bottom - y(d.value))
+                .attr("fill", "#3182ce")
+                .on("mouseover", function (event, d) {
+                    const tooltip = d3.select("#tooltip");
+                    tooltip.html(`<strong>${d.gene}</strong><br>
+                                  <em>Value:</em> ${d.value.toFixed(2)}`)
+                        .classed("active", true)
+                        .style("left", `${event.pageX}px`)
+                        .style("top", `${event.pageY}px`);
+                })
+                .on("mouseout", function () {
+                    d3.select("#tooltip").classed("active", false);
+                })
+                .on("mousemove", function (event) {
+                    d3.select("#tooltip")
+                        .style("left", `${event.pageX}px`)
+                        .style("top", `${event.pageY}px`);
+                });
+
+            svg.append("g")
+                .attr("transform", `translate(0,${height - margin.bottom})`)
+                .call(d3.axisBottom(x))
+                .selectAll("text")
+                .attr("transform", "rotate(-45)")
+                .style("text-anchor", "end");
+
+            svg.append("g")
+                .attr("transform", `translate(${margin.left},0)`)
+                .call(d3.axisLeft(y));
+
+            // Zoom behavior
+            const zoom = d3.zoom()
+                .extent([[margin.left, margin.top], [width - margin.right, height - margin.bottom]])
+                .scaleExtent([1, 4])
+                .on("zoom", zoomed);
+
+            svg.call(zoom);
+
+            function zoomed(event) {
+                const { transform } = event;
+                svg.selectAll("rect")
+                    .attr("transform", transform)
+                    .attr("stroke-width", 1 / transform.k);
+
+                    const zoomBox = d3.select("#zoom-box");
+                    zoomBox.attr("class", "zoom-box")
+                        .attr("style", `left:${transform.x}px;top:${transform.y}px;width:${transform.k * width}px;height:${transform.k * height}px`)
+                        .classed("hidden", false);
+                }
+            }
+    
+            // Function to render a 3D DNA structure using Three.js
+            function renderDNA3DStructure(data) {
+                const container = document.getElementById("threejs-container");
+                container.innerHTML = ''; // Clear previous render
+    
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+                const renderer = new THREE.WebGLRenderer();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+                container.appendChild(renderer.domElement);
+    
+                const geometry = new THREE.CylinderGeometry(0.05, 0.05, 1, 32);
+    
+                // Materials for each base pair
+                const materialA = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+                const materialT = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+                const materialC = new THREE.MeshStandardMaterial({ color: 0x0000ff });
+                const materialG = new THREE.MeshStandardMaterial({ color: 0xffff00 });
+    
+                const baseMaterials = {
+                    'A': materialA,
+                    'T': materialT,
+                    'C': materialC,
+                    'G': materialG
+                };
+    
+                // Create DNA structure
+                for (let i = 0; i < data.length; i++) {
+                    const sequence = data[i].sequence;
+                    for (let j = 0; j < sequence.length; j++) {
+                        const base = sequence[j];
+                        const material = baseMaterials[base] || materialA; // Default to red for unknown bases
+                        const cylinder = new THREE.Mesh(geometry, material);
+                        cylinder.position.set(j * 0.1, i * 1.1, 0);
+                        scene.add(cylinder);
+                    }
+                }
+    
+                camera.position.z = 5;
+    
+                // Add lighting to the scene for better visibility
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+                scene.add(ambientLight);
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+                directionalLight.position.set(0, 0, 1);
+                scene.add(directionalLight);
+    
+                // Animation function
+                const animate = function () {
+                    requestAnimationFrame(animate);
+                    scene.rotation.y += 0.01;
+                    renderer.render(scene, camera);
+                };
+    
+                animate();
+            }
+    
+            // Function to display uploaded data in the sidebar
+            function displayUploadedData(dataType) {
+                const list = d3.select("#gene-list");
+                list.selectAll("li").remove(); // Clear existing list items
+                list.append("li").text(`Uploaded ${dataType}`).classed("py-1 px-2 font-semibold", true);
+                genomicData.forEach(d => {
+                    list.append("li").text(`${d.gene}: ${d.value}`).classed("py-1 px-2", true);
+                });
+            }
+    
+            // Function to determine gender based on genomic data
+            function determineGender(data) {
+                const genderResult = d3.select("#gender-result");
+                const yChromosomeGene = data.find(d => d.chromosome === 'Y');
+                const gender = yChromosomeGene ? 'Male' : 'Female';
+                genderResult.text(`Determined Gender: ${gender}`).classed("text-lg font-semibold", true);
+            }
+    
+            // Event listener for file uploads
+            document.getElementById("file-upload").addEventListener("change", (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const fileType = file.type;
+                    if (fileType === "application/json") {
+                        handleJSONFile(file);
+                    } else if (fileType === "application/pdf") {
+                        handlePDFFile(file);
+                    } else {
+                        alert("Unsupported file type. Please upload a JSON or PDF file.");
+                    }
+                }
+            });
+    
+            // Error handling
+            window.onerror = function (message, source, lineno, colno, error) {
+                console.error(`Error: ${message} at ${source}:${lineno}:${colno}`);
+                alert('An error occurred. Please check the console for details.');
+            };
+        </script>
+    </body>
+    
+    </html>
+    
+              
