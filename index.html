@@ -1,0 +1,2792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<title>GeneX — Genome Browser & Analyzer</title>
+
+<!-- Bootstrap 5 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<!-- AOS Animation Library -->
+<link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --paper: #FAFAF7;
+  --ink: #111111;
+  --dim: #888888;
+  --faint: #E8E8E4;
+  --grid: #F0F0EC;
+  --green: #2D5016;
+  --green-dim: rgba(45,80,22,0.12);
+  --green-light: #4a7c23;
+  --red: #8B1A1A;
+  --red-dim: rgba(139,26,26,0.12);
+  --blue: #1E3A5F;
+  --blue-dim: rgba(30,58,95,0.12);
+  --blue-light: #2d5a8a;
+  --yellow: #B8860B;
+  --yellow-dim: rgba(184,134,11,0.12);
+  --purple: #5B2E91;
+  --purple-dim: rgba(91,46,145,0.12);
+  --font: 'Space Grotesk', sans-serif;
+  --mono: 'IBM Plex Mono', monospace;
+  --ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Bootstrap Overrides */
+body {
+  font-family: var(--font);
+  background: var(--paper);
+  color: var(--ink);
+  overflow-x: hidden;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  cursor: crosshair;
+}
+
+@media (pointer: coarse) {
+  body { cursor: auto; }
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font);
+  font-weight: 300;
+  letter-spacing: -0.02em;
+}
+
+.btn {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: 100px;
+  padding: 0.75rem 1.5rem;
+  transition: all 0.4s var(--ease-out);
+}
+
+.btn-primary {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
+.btn-primary:hover {
+  background: var(--green);
+  border-color: var(--green);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px var(--green-dim);
+}
+
+.btn-outline-dark {
+  border-color: var(--ink);
+  color: var(--ink);
+  background: transparent;
+}
+
+.btn-outline-dark:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.btn-lg {
+  padding: 1rem 2rem;
+  font-size: 0.85rem;
+}
+
+/* Navbar */
+.gx-navbar {
+  background: rgba(250, 250, 247, 0.95) !important;
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--faint);
+  padding: 0.75rem 0;
+  transition: all 0.3s;
+}
+
+.gx-navbar.scrolled {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  padding: 0.5rem 0;
+}
+
+.navbar-brand {
+  font-family: var(--font);
+  font-weight: 600;
+  font-size: 1.1rem;
+  letter-spacing: -0.02em;
+  color: var(--ink) !important;
+}
+
+.navbar-brand::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--green);
+  margin-right: 10px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.nav-link {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--dim) !important;
+  padding: 0.5rem 1rem !important;
+  transition: color 0.3s;
+}
+
+.nav-link:hover, .nav-link.active {
+  color: var(--ink) !important;
+}
+
+.navbar-toggler {
+  border: none;
+  padding: 0.5rem;
+}
+
+.navbar-toggler:focus {
+  box-shadow: none;
+}
+
+/* Boot Sequence */
+#boot {
+  position: fixed; inset: 0; z-index: 10000; background: var(--paper);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  transition: opacity 1.2s, visibility 1.2s;
+}
+#boot.done { opacity: 0; visibility: hidden; pointer-events: none; }
+.boot-logo {
+  font-family: var(--font); font-size: 14px; font-weight: 600; letter-spacing: -0.02em;
+  margin-bottom: 48px; display: flex; align-items: center; gap: 12px;
+}
+.boot-line {
+  font-family: var(--mono); font-size: 10px; color: var(--dim); letter-spacing: 0.05em;
+  margin-bottom: 12px; opacity: 0; transform: translateY(10px);
+  transition: all 0.6s var(--ease-out);
+}
+.boot-line.visible { opacity: 1; transform: translateY(0); }
+.boot-line.ok { color: var(--green); }
+.boot-line span { display: inline-block; width: 200px; }
+.boot-progress {
+  width: 240px; height: 2px; background: var(--faint); border-radius: 1px;
+  margin-top: 32px; overflow: hidden; opacity: 0; transition: opacity 0.6s;
+}
+.boot-progress.visible { opacity: 1; }
+.boot-progress-fill {
+  height: 100%; width: 0%; background: linear-gradient(90deg, var(--green), var(--blue));
+  transition: width 0.4s var(--ease-out);
+}
+
+/* Grid Overlay */
+.grid-overlay {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image: 
+    linear-gradient(to right, var(--grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+  background-size: 80px 80px;
+  opacity: 0.5;
+}
+
+/* Read Head */
+#read-head {
+  position: fixed; top: 0; bottom: 0; width: 1px; background: var(--ink);
+  z-index: 100; pointer-events: none; opacity: 0.12; transition: left 0.15s linear;
+}
+#read-head.active {
+  opacity: 0.4; width: 2px;
+  background: linear-gradient(to bottom, transparent, var(--green), transparent);
+}
+
+/* Custom Cursor (desktop only) */
+#cursor {
+  position: fixed; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--ink); pointer-events: none; z-index: 1000;
+  transform: translate(-50%, -50%); transition: transform 0.1s;
+  mix-blend-mode: difference;
+}
+@media (pointer: coarse) {
+  #cursor { display: none; }
+}
+
+/* Ruler */
+.ruler {
+  position: fixed; top: 56px; left: 0; right: 0; height: 24px;
+  border-bottom: 1px solid var(--faint); background: var(--paper);
+  z-index: 40; overflow: hidden; pointer-events: none;
+}
+.ruler-track {
+  position: absolute; top: 0; left: 0; height: 100%;
+  display: flex; align-items: flex-end; padding-bottom: 4px;
+  font-family: var(--mono); font-size: 8px; color: var(--dim);
+  transition: transform 0.1s linear;
+}
+.ruler-tick {
+  position: absolute; bottom: 0; width: 1px; height: 6px;
+  background: var(--dim); opacity: 0.3;
+}
+.ruler-tick.major { height: 10px; opacity: 0.6; }
+.ruler-label {
+  position: absolute; bottom: 2px; transform: translateX(-50%);
+}
+
+/* Minimap */
+.minimap {
+  position: fixed; right: 16px; top: 90px; bottom: 48px; width: 40px;
+  z-index: 45; display: flex; flex-direction: column; gap: 2px;
+  padding: 4px 0;
+}
+.minimap-locus {
+  flex: 1; border-radius: 2px; background: var(--faint);
+  position: relative; cursor: pointer; transition: all 0.3s;
+  border: 1px solid transparent;
+}
+.minimap-locus:hover { background: var(--dim); }
+.minimap-locus.active {
+  background: var(--green); border-color: var(--green);
+}
+.minimap-locus::after {
+  content: attr(data-label); position: absolute; right: 48px; top: 50%;
+  transform: translateY(-50%); font-family: var(--mono); font-size: 8px;
+  color: var(--dim); opacity: 0; transition: opacity 0.3s;
+  white-space: nowrap;
+}
+.minimap-locus:hover::after { opacity: 1; }
+@media (max-width: 768px) {
+  .minimap { display: none; }
+}
+
+/* Command Palette */
+#palette {
+  position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.2);
+  backdrop-filter: blur(8px); opacity: 0; visibility: hidden;
+  transition: all 0.4s; display: flex; align-items: flex-start; justify-content: center;
+  padding-top: 20vh;
+}
+#palette.open { opacity: 1; visibility: visible; }
+.palette-box {
+  width: 560px; max-width: 90vw; background: var(--paper);
+  border: 1px solid var(--faint); border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.1); overflow: hidden;
+}
+.palette-input {
+  width: 100%; padding: 20px 24px; border: none; border-bottom: 1px solid var(--faint);
+  font-family: var(--mono); font-size: 14px; color: var(--ink); outline: none;
+  background: transparent;
+}
+.palette-input::placeholder { color: var(--dim); }
+.palette-items { padding: 8px 0; }
+.palette-item {
+  padding: 12px 24px; font-family: var(--mono); font-size: 12px; color: var(--dim);
+  cursor: pointer; transition: all 0.2s; display: flex; justify-content: space-between;
+}
+.palette-item:hover { background: var(--faint); color: var(--ink); }
+.palette-item span:last-child { color: var(--dim); font-size: 10px; }
+
+/* Hero Section */
+.hero-section {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  padding: 120px 0 80px;
+  overflow: hidden;
+}
+
+.hero-canvas {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  z-index: 0;
+  opacity: 0.6;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 1.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--faint);
+  border-radius: 100px;
+  background: rgba(250,250,247,0.8);
+  backdrop-filter: blur(4px);
+}
+
+.hero-badge .pulse-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--green);
+  animation: pulse 2s infinite;
+}
+
+.hero-title {
+  font-size: clamp(2.5rem, 6vw, 5rem);
+  font-weight: 300;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  margin-bottom: 1.5rem;
+}
+
+.hero-title .accent {
+  font-weight: 500;
+  color: var(--green);
+}
+
+.hero-subtitle {
+  font-size: 1.1rem;
+  color: var(--dim);
+  max-width: 500px;
+  line-height: 1.7;
+  margin-bottom: 2rem;
+}
+
+.hero-subtitle code {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  background: var(--faint);
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.hero-cta {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Stats Section */
+.stats-section {
+  padding: 80px 0;
+  border-bottom: 1px solid var(--faint);
+  background: linear-gradient(to bottom, var(--paper), var(--grid));
+}
+
+.stat-card {
+  text-align: center;
+  padding: 2rem 1rem;
+  border-radius: 12px;
+  background: var(--paper);
+  border: 1px solid var(--faint);
+  transition: all 0.4s var(--ease-out);
+}
+
+.stat-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.06);
+  border-color: var(--green);
+}
+
+.stat-icon {
+  font-size: 1.5rem;
+  color: var(--green);
+  margin-bottom: 1rem;
+}
+
+.stat-number {
+  font-family: var(--font);
+  font-size: 2.5rem;
+  font-weight: 300;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+
+.stat-label {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+/* Features Section */
+.features-section {
+  padding: 100px 0;
+  border-bottom: 1px solid var(--faint);
+}
+
+.section-header {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 1rem;
+}
+
+.section-title {
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 300;
+  letter-spacing: -0.03em;
+  margin-bottom: 3rem;
+  max-width: 600px;
+}
+
+.feature-card {
+  padding: 2rem;
+  border-radius: 12px;
+  background: var(--paper);
+  border: 1px solid var(--faint);
+  transition: all 0.4s var(--ease-out);
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--green), var(--blue));
+  transform: scaleX(0);
+  transition: transform 0.4s var(--ease-out);
+  transform-origin: left;
+}
+
+.feature-card:hover::before {
+  transform: scaleX(1);
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.05);
+  border-color: var(--faint);
+}
+
+.feature-icon {
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  margin-bottom: 1.25rem;
+  background: var(--green-dim);
+  color: var(--green);
+  transition: all 0.3s;
+}
+
+.feature-card:hover .feature-icon {
+  transform: scale(1.1) rotate(-5deg);
+}
+
+.feature-title {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.01em;
+}
+
+.feature-desc {
+  font-size: 0.875rem;
+  color: var(--dim);
+  line-height: 1.6;
+  margin-bottom: 1.25rem;
+}
+
+.feature-link {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 1px solid var(--ink);
+  padding-bottom: 2px;
+  transition: all 0.3s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.feature-link:hover {
+  color: var(--green);
+  border-color: var(--green);
+  gap: 10px;
+}
+
+/* Analyzer CTA Section */
+.analyzer-section {
+  padding: 100px 0;
+  background: var(--ink);
+  color: var(--paper);
+  position: relative;
+  overflow: hidden;
+}
+
+.analyzer-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(circle at 20% 50%, var(--green-dim) 0%, transparent 50%),
+    radial-gradient(circle at 80% 50%, var(--blue-dim) 0%, transparent 50%);
+  opacity: 0.3;
+}
+
+.analyzer-content {
+  position: relative;
+  z-index: 1;
+}
+
+.analyzer-section .section-header {
+  color: var(--dim);
+}
+
+.analyzer-section .section-title {
+  color: var(--paper);
+}
+
+.analyzer-section .section-subtitle {
+  color: var(--dim);
+  max-width: 500px;
+  margin-bottom: 2rem;
+  line-height: 1.7;
+}
+
+.analyzer-btn {
+  background: var(--paper);
+  color: var(--ink);
+  border: none;
+  padding: 1rem 2rem;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: 100px;
+  transition: all 0.4s;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.analyzer-btn:hover {
+  background: var(--green);
+  color: var(--paper);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(45,80,22,0.3);
+}
+
+.analyzer-preview {
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.03);
+  padding: 1.5rem;
+  backdrop-filter: blur(10px);
+}
+
+.analyzer-metric {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+}
+
+.analyzer-metric:last-child {
+  border-bottom: none;
+}
+
+.analyzer-metric-label {
+  color: var(--dim);
+}
+
+.analyzer-metric-value {
+  color: var(--paper);
+  font-weight: 500;
+}
+
+/* Browser Tracks */
+#browser {
+  position: relative;
+  width: 100%;
+  padding-top: 80px;
+}
+
+.track {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-bottom: 1px solid var(--faint);
+  transition: transform 0.3s;
+}
+
+.track-label {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--dim);
+  writing-mode: vertical-rl;
+  transform: rotate(180deg) translateY(50%);
+}
+
+.track-data {
+  position: absolute;
+  left: 48px;
+  right: 64px;
+  top: 0;
+  bottom: 0;
+}
+
+.ref-track { height: 32px; background: linear-gradient(to bottom, var(--paper), var(--faint)); }
+.ref-base {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  font-family: var(--mono); font-size: 10px; font-weight: 500;
+  width: 20px; text-align: center; transition: all 0.3s;
+}
+.ref-base.A { color: var(--green); }
+.ref-base.T { color: var(--red); }
+.ref-base.G { color: var(--yellow); }
+.ref-base.C { color: var(--blue); }
+.ref-base:hover { transform: translateY(-50%) scale(1.5); z-index: 10; }
+
+.gene-track { height: 48px; }
+.gene-annotation {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  height: 20px; border-radius: 3px; cursor: pointer;
+  transition: all 0.4s var(--ease); display: flex; align-items: center;
+  padding: 0 8px; font-family: var(--mono); font-size: 8px;
+  color: white; letter-spacing: 0.05em; white-space: nowrap;
+}
+.gene-annotation:hover { height: 28px; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+.gene-annotation::after {
+  content: '→'; margin-left: 4px; font-size: 10px; opacity: 0.7;
+}
+.gene-annotation.reverse::after { content: '←'; }
+.gene-tooltip {
+  position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%) translateY(-4px);
+  background: var(--ink); color: white; padding: 4px 8px; border-radius: 4px;
+  font-family: var(--mono); font-size: 9px; white-space: nowrap;
+  opacity: 0; pointer-events: none; transition: opacity 0.3s;
+}
+.gene-annotation:hover .gene-tooltip { opacity: 1; }
+
+#polymerase {
+  position: absolute; top: -8px; width: 16px; height: 16px;
+  background: var(--ink); border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(0,0,0,0.1);
+  transition: left 0.3s var(--ease-out);
+  z-index: 5;
+}
+
+.variant-track { height: 32px; }
+.variant-tick {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 3px; height: 12px; border-radius: 2px; cursor: pointer;
+  transition: all 0.3s;
+}
+.variant-tick:hover { transform: translateY(-50%) scale(1.5); }
+.variant-tick.snp { background: var(--red); }
+.variant-tick.indel { background: var(--blue); }
+.variant-tick.synonymous { background: var(--green); }
+
+.align-track { height: 80px; }
+.align-read {
+  position: absolute; height: 6px; border-radius: 2px;
+  background: var(--dim); opacity: 0.25; transition: opacity 0.3s;
+}
+.align-read:hover { opacity: 0.6; }
+
+.chroma-track { height: 140px; }
+.chroma-svg {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+}
+
+.base-track { height: 36px; }
+.base {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  font-family: var(--mono); font-size: 11px; font-weight: 500;
+  width: 24px; text-align: center; transition: all 0.3s;
+}
+.base.A { color: var(--green); }
+.base.T { color: var(--red); }
+.base.G { color: var(--yellow); }
+.base.C { color: var(--blue); }
+.base.scanning {
+  transform: translateY(-50%) scale(1.4);
+  text-shadow: 0 0 10px currentColor;
+}
+
+.quality-track { height: 56px; }
+.quality-bar {
+  position: absolute; bottom: 0; width: 2px;
+  background: var(--dim); opacity: 0.25; transition: opacity 0.5s, height 1s var(--ease-out);
+}
+
+.coverage-track { height: 72px; position: relative; }
+.coverage-path {
+  position: absolute; inset: 0; opacity: 0.15;
+}
+
+/* Locus Sections */
+.locus {
+  position: relative;
+  width: 100%;
+  padding: 100px 40px 100px 48px;
+  border-bottom: 1px solid var(--faint);
+  opacity: 0; transform: translateY(30px);
+  transition: all 0.8s var(--ease-out);
+}
+.locus.in-view {
+  opacity: 1; transform: translateY(0);
+}
+.locus-header {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.3em;
+  text-transform: uppercase; color: var(--dim); margin-bottom: 20px;
+  display: flex; align-items: center; gap: 12px;
+}
+.locus-header::before {
+  content: ''; width: 24px; height: 1px; background: var(--dim);
+}
+.locus-title {
+  font-size: clamp(2.2rem, 5vw, 4.5rem); font-weight: 300;
+  line-height: 1.05; letter-spacing: -0.04em; max-width: 700px;
+  margin-bottom: 28px;
+}
+.locus-title .accent { font-weight: 500; }
+.locus-body {
+  font-size: 15px; color: var(--dim); max-width: 480px;
+  line-height: 1.7; margin-bottom: 32px;
+}
+.locus-body code {
+  font-family: var(--mono); font-size: 0.85em; background: var(--faint);
+  padding: 3px 8px; border-radius: 4px;
+}
+.locus-meta {
+  display: flex; gap: 28px; font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim);
+  margin-bottom: 40px; flex-wrap: wrap;
+}
+.locus-meta span { display: flex; align-items: center; gap: 8px; }
+.meta-dot { width: 6px; height: 6px; border-radius: 50%; }
+.meta-dot.green { background: var(--green); }
+.meta-dot.red { background: var(--red); }
+.meta-dot.blue { background: var(--blue); }
+.meta-dot.yellow { background: var(--yellow); }
+.meta-dot.purple { background: var(--purple); }
+
+.action {
+  display: inline-block; font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.15em; text-transform: uppercase; color: var(--ink);
+  text-decoration: none; border-bottom: 1px solid var(--ink);
+  padding-bottom: 4px; transition: all 0.4s; cursor: crosshair;
+}
+.action:hover { color: var(--dim); border-color: var(--dim); }
+
+/* Karyotype Section */
+.karyotype-section {
+  padding: 120px 40px; border-bottom: 1px solid var(--faint);
+  position: relative;
+}
+.karyotype-header {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.3em;
+  text-transform: uppercase; color: var(--dim); margin-bottom: 48px;
+}
+.karyotype-grid {
+  display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px;
+  max-width: 1000px; margin: 0 auto;
+}
+.chromosome {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  cursor: pointer; transition: all 0.4s;
+  position: relative;
+}
+.chromosome:hover { transform: translateY(-8px) scale(1.1); z-index: 10; }
+.chromosome-body {
+  width: 16px; height: 100px; background: var(--faint); border-radius: 8px;
+  position: relative; overflow: hidden; transition: all 0.4s;
+  border: 1px solid var(--faint);
+}
+.chromosome:hover .chromosome-body {
+  border-color: var(--green); box-shadow: 0 8px 24px var(--green-dim);
+}
+.chromosome-band {
+  position: absolute; left: 0; right: 0; background: var(--dim); opacity: 0.4;
+}
+.chromosome-band.dark {
+  background: var(--ink); opacity: 0.6;
+}
+.chromosome-label {
+  font-family: var(--mono); font-size: 9px; color: var(--dim);
+}
+.chromosome-tooltip {
+  position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%);
+  background: var(--ink); color: white; padding: 6px 12px; border-radius: 6px;
+  font-family: var(--mono); font-size: 10px; white-space: nowrap;
+  opacity: 0; pointer-events: none; transition: all 0.3s;
+}
+.chromosome:hover .chromosome-tooltip { opacity: 1; }
+
+/* 3D Helix Section */
+.helix-section {
+  padding: 120px 40px; border-bottom: 1px solid var(--faint);
+  position: relative; overflow: hidden;
+  perspective: 1000px;
+}
+.helix-header {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.3em;
+  text-transform: uppercase; color: var(--dim); margin-bottom: 48px;
+}
+.helix-stage {
+  display: flex; align-items: center; justify-content: center;
+  height: 400px; position: relative;
+}
+.helix-3d {
+  width: 200px; height: 400px;
+  transform-style: preserve-3d;
+  animation: helixRotate 15s linear infinite;
+}
+@keyframes helixRotate {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(360deg); }
+}
+.helix-base-pair {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; justify-content: center;
+  gap: 40px;
+}
+.helix-base {
+  width: 24px; height: 24px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 10px; font-weight: 500; color: white;
+}
+.helix-bond {
+  width: 32px; height: 1px; background: var(--dim); opacity: 0.3;
+}
+.helix-base.A { background: var(--green); }
+.helix-base.T { background: var(--red); }
+.helix-base.G { background: var(--yellow); color: var(--ink); }
+.helix-base.C { background: var(--blue); }
+
+/* Gene Model Section */
+.genemodel-section {
+  padding: 120px 40px; border-bottom: 1px solid var(--faint);
+}
+.genemodel-header {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.3em;
+  text-transform: uppercase; color: var(--dim); margin-bottom: 48px;
+}
+.genemodel-track {
+  position: relative; height: 80px; background: var(--faint);
+  border-radius: 8px; overflow: hidden;
+}
+.genemodel-strand {
+  position: absolute; left: 0; right: 0; top: 50%; height: 2px;
+  background: var(--dim); opacity: 0.3; transform: translateY(-50%);
+}
+.genemodel-exon {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  height: 24px; background: var(--green); border-radius: 4px;
+  opacity: 0.8; transition: all 0.4s; cursor: pointer;
+}
+.genemodel-exon:hover { opacity: 1; height: 32px; }
+.genemodel-exon:nth-child(even) { background: var(--blue); }
+.genemodel-intron {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  height: 2px; background: var(--dim); opacity: 0.5;
+}
+.genemodel-utr {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  height: 12px; background: var(--yellow); border-radius: 2px;
+  opacity: 0.6;
+}
+.genemodel-label {
+  position: absolute; bottom: 8px; font-family: var(--mono); font-size: 8px;
+  color: var(--dim); transform: translateX(-50%);
+}
+
+/* Read Pileup Section */
+.pileup-section {
+  padding: 120px 40px; border-bottom: 1px solid var(--faint);
+}
+.pileup-header {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.3em;
+  text-transform: uppercase; color: var(--dim); margin-bottom: 48px;
+}
+.pileup-track {
+  position: relative; height: 200px; background: var(--faint);
+  border-radius: 8px; overflow: hidden;
+}
+.pileup-read {
+  position: absolute; height: 8px; border-radius: 2px;
+  background: var(--dim); opacity: 0.3; transition: all 0.3s;
+}
+.pileup-read:hover { opacity: 0.7; }
+.pileup-read.mismatch {
+  background: var(--red); opacity: 0.6;
+}
+.pileup-read.mismatch:hover { opacity: 1; }
+
+/* Heatmap Section */
+.heatmap-section {
+  padding: 120px 40px; border-bottom: 1px solid var(--faint);
+}
+.heatmap-header {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.3em;
+  text-transform: uppercase; color: var(--dim); margin-bottom: 48px;
+}
+.heatmap-grid {
+  display: grid; grid-template-columns: repeat(20, 1fr); gap: 2px;
+  max-width: 600px; margin: 0 auto;
+}
+.heatmap-cell {
+  aspect-ratio: 1; border-radius: 2px; transition: all 0.3s; cursor: pointer;
+  position: relative;
+}
+.heatmap-cell:hover { transform: scale(1.3); z-index: 10; border-radius: 4px; }
+.heatmap-tooltip {
+  position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%);
+  background: var(--ink); color: white; padding: 4px 8px; border-radius: 4px;
+  font-family: var(--mono); font-size: 9px; white-space: nowrap;
+  opacity: 0; pointer-events: none; transition: all 0.3s;
+}
+.heatmap-cell:hover .heatmap-tooltip { opacity: 1; }
+
+/* VCF Table Section */
+.vcf-section {
+  padding: 120px 40px; border-bottom: 1px solid var(--faint);
+}
+.vcf-header {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.3em;
+  text-transform: uppercase; color: var(--dim); margin-bottom: 48px;
+}
+.vcf-table {
+  width: 100%; max-width: 900px; margin: 0 auto;
+  font-family: var(--mono); font-size: 11px; border-collapse: collapse;
+}
+.vcf-table th {
+  text-align: left; padding: 12px 16px; border-bottom: 2px solid var(--ink);
+  color: var(--dim); font-weight: 400; letter-spacing: 0.1em;
+  text-transform: uppercase; font-size: 9px;
+}
+.vcf-table td {
+  padding: 12px 16px; border-bottom: 1px solid var(--faint);
+  color: var(--ink); transition: all 0.3s;
+}
+.vcf-table tr:hover td {
+  background: var(--faint);
+}
+.vcf-table .vcf-chr { color: var(--dim); }
+.vcf-table .vcf-pos { color: var(--blue); }
+.vcf-table .vcf-ref { color: var(--green); }
+.vcf-table .vcf-alt { color: var(--red); }
+.vcf-table .vcf-qual { color: var(--yellow); }
+.vcf-table .vcf-filter { color: var(--green); }
+.vcf-table .vcf-filter.fail { color: var(--red); }
+
+/* Detail Panel */
+.detail-panel {
+  position: fixed; right: 0; top: 56px; bottom: 32px; width: 360px;
+  background: var(--paper); border-left: 1px solid var(--faint);
+  z-index: 60; transform: translateX(100%);
+  transition: transform 0.5s var(--ease-out); overflow-y: auto;
+  padding: 40px;
+}
+.detail-panel.open { transform: translateX(0); }
+.detail-close {
+  position: absolute; top: 16px; right: 16px; width: 32px; height: 32px;
+  border: 1px solid var(--faint); border-radius: 50%; background: none;
+  cursor: crosshair; display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 14px; color: var(--dim);
+  transition: all 0.3s;
+}
+.detail-close:hover { border-color: var(--ink); color: var(--ink); }
+.detail-header {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.3em;
+  text-transform: uppercase; color: var(--dim); margin-bottom: 16px;
+}
+.detail-title {
+  font-size: 24px; font-weight: 300; line-height: 1.2;
+  letter-spacing: -0.02em; margin-bottom: 20px;
+}
+.detail-body {
+  font-size: 13px; color: var(--dim); line-height: 1.7; margin-bottom: 32px;
+}
+.detail-metrics {
+  border-top: 1px solid var(--faint); margin-bottom: 32px;
+}
+.detail-metric {
+  display: flex; justify-content: space-between; padding: 12px 0;
+  border-bottom: 1px solid var(--faint); font-family: var(--mono); font-size: 11px;
+}
+.detail-metric-label { color: var(--dim); }
+.detail-metric-value { color: var(--ink); font-weight: 500; }
+
+/* Completion Section */
+.completion {
+  padding: 120px 40px; text-align: center;
+}
+.completion-header {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.3em;
+  text-transform: uppercase; color: var(--dim); margin-bottom: 24px;
+}
+.completion h2 {
+  font-size: clamp(2rem, 4vw, 3.5rem); font-weight: 300;
+  letter-spacing: -0.03em; margin-bottom: 20px;
+}
+.completion-form {
+  max-width: 480px; margin: 40px auto 0;
+  display: flex; gap: 12px; padding: 8px;
+  border: 1px solid var(--faint); border-radius: 100px;
+  background: var(--paper);
+}
+.completion-input {
+  flex: 1; border: none; padding: 12px 20px;
+  font-family: var(--mono); font-size: 13px; color: var(--ink); outline: none;
+  background: transparent;
+}
+.completion-input::placeholder { color: var(--dim); }
+.completion-btn {
+  padding: 12px 28px; background: var(--ink); color: var(--paper);
+  border: none; border-radius: 100px; font-family: var(--mono); font-size: 11px;
+  letter-spacing: 0.1em; text-transform: uppercase; cursor: crosshair;
+  transition: all 0.4s;
+}
+.completion-btn:hover { background: var(--green); }
+
+/* Bottom Bar */
+.bottom-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; height: 32px;
+  border-top: 1px solid var(--faint); display: flex;
+  align-items: center; justify-content: space-between; padding: 0 40px;
+  background: var(--paper); z-index: 50;
+}
+.bottom-bar-left {
+  font-family: var(--mono); font-size: 9px; color: var(--dim);
+}
+.bottom-bar-right {
+  font-family: var(--mono); font-size: 9px; color: var(--dim);
+  display: flex; gap: 16px;
+}
+
+/* Testimonials Section */
+.testimonials-section {
+  padding: 100px 0;
+  border-bottom: 1px solid var(--faint);
+  background: var(--grid);
+}
+
+.testimonial-card {
+  background: var(--paper);
+  border: 1px solid var(--faint);
+  border-radius: 16px;
+  padding: 2rem;
+  transition: all 0.4s;
+  height: 100%;
+}
+
+.testimonial-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.05);
+}
+
+.testimonial-quote {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--ink);
+  margin-bottom: 1.5rem;
+  font-style: italic;
+}
+
+.testimonial-author {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.testimonial-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--faint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  color: var(--dim);
+}
+
+.testimonial-name {
+  font-weight: 500;
+  font-size: 0.9rem;
+  margin-bottom: 0;
+}
+
+.testimonial-role {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--dim);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Workflow Section */
+.workflow-section {
+  padding: 100px 0;
+  border-bottom: 1px solid var(--faint);
+}
+
+.workflow-step {
+  display: flex;
+  gap: 1.5rem;
+  position: relative;
+  padding-bottom: 2rem;
+}
+
+.workflow-step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 24px;
+  top: 48px;
+  bottom: 0;
+  width: 1px;
+  background: var(--faint);
+}
+
+.workflow-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--green-dim);
+  color: var(--green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.workflow-content h4 {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.workflow-content p {
+  font-size: 0.875rem;
+  color: var(--dim);
+  line-height: 1.6;
+  margin-bottom: 0;
+}
+
+/* Footer */
+.gx-footer {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 80px 0 40px;
+}
+
+.gx-footer a {
+  color: var(--dim);
+  text-decoration: none;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  transition: color 0.3s;
+}
+
+.gx-footer a:hover {
+  color: var(--paper);
+}
+
+.gx-footer h5 {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 1.5rem;
+}
+
+.footer-bottom {
+  border-top: 1px solid rgba(255,255,255,0.1);
+  padding-top: 2rem;
+  margin-top: 3rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+/* Animations */
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.2); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Typing cursor */
+.typing-cursor::after {
+  content: '|';
+  animation: blink 1s infinite;
+  color: var(--green);
+  margin-left: 2px;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Toast */
+.gx-toast-container {
+  position: fixed;
+  bottom: 48px;
+  right: 16px;
+  z-index: 1000;
+}
+
+.gx-toast {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  margin-top: 8px;
+  animation: slideIn 0.4s var(--ease-out);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--paper);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--faint);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--dim);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .locus { padding: 60px 24px 60px 24px; }
+  .track-label { left: 8px; }
+  .track-data { left: 32px; right: 56px; }
+  .top-bar, .bottom-bar { padding: 0 16px; }
+  .grid-overlay { background-size: 40px 40px; }
+  .minimap { display: none; }
+  .detail-panel { width: 100%; }
+  .karyotype-grid { grid-template-columns: repeat(6, 1fr); }
+  .vcf-table { font-size: 9px; }
+  .vcf-table th, .vcf-table td { padding: 8px; }
+  .hero-section { padding: 100px 0 60px; }
+  .hero-cta { justify-content: center; }
+  .stats-section { padding: 60px 0; }
+  .features-section { padding: 60px 0; }
+  .analyzer-section { padding: 60px 0; }
+  .testimonials-section { padding: 60px 0; }
+  .workflow-section { padding: 60px 0; }
+  .karyotype-section { padding: 60px 24px; }
+  .helix-section { padding: 60px 24px; }
+  .genemodel-section { padding: 60px 24px; }
+  .pileup-section { padding: 60px 24px; }
+  .heatmap-section { padding: 60px 24px; }
+  .vcf-section { padding: 60px 24px; }
+  .completion { padding: 60px 24px; }
+  .gx-footer { padding: 60px 0 30px; }
+  .footer-bottom { flex-direction: column; text-align: center; }
+  .workflow-step::before { left: 20px; }
+  .workflow-icon { width: 40px; height: 40px; font-size: 1rem; }
+  .bottom-bar { display: none; }
+  .ruler { top: 56px; }
+  .detail-panel { top: 56px; bottom: 0; }
+}
+
+@media (max-width: 576px) {
+  .hero-title { font-size: 2rem; }
+  .stat-number { font-size: 1.75rem; }
+  .feature-card { padding: 1.5rem; }
+  .completion-form { flex-direction: column; border-radius: 16px; }
+  .completion-btn { width: 100%; }
+  .analyzer-preview { margin-top: 2rem; }
+  .karyotype-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* Horizontal scroll for tracks on mobile */
+@media (max-width: 768px) {
+  .track-scroll-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .track-scroll-container::-webkit-scrollbar {
+    display: none;
+  }
+}
+</style>
+<base target="_blank">
+</head>
+<body>
+
+<!-- Boot Sequence -->
+<div id="boot">
+  <div class="boot-logo">GeneX</div>
+  <div class="boot-line" id="boot-1"><span>Initializing laser module...</span></div>
+  <div class="boot-line" id="boot-2"><span>Calibrating CCD array...</span></div>
+  <div class="boot-line" id="boot-3"><span>Checking fluidics system...</span></div>
+  <div class="boot-line" id="boot-4"><span>Loading reference genome...</span></div>
+  <div class="boot-line" id="boot-5"><span>Ready</span> <span class="ok">OK</span></div>
+  <div class="boot-progress" id="boot-progress"><div class="boot-progress-fill" id="boot-fill"></div></div>
+</div>
+
+<!-- Grid Overlay -->
+<div class="grid-overlay" aria-hidden="true"></div>
+
+<!-- Read Head & Cursor -->
+<div id="read-head" aria-hidden="true"></div>
+<div id="cursor" aria-hidden="true"></div>
+
+<!-- Toast Container -->
+<div class="gx-toast-container" id="toast-container"></div>
+
+<!-- Command Palette -->
+<div id="palette" onclick="closePalette()">
+  <div class="palette-box" onclick="event.stopPropagation()">
+    <input type="text" class="palette-input" placeholder="Search locus, gene, or command..." id="palette-input">
+    <div class="palette-items">
+      <div class="palette-item" onclick="jumpTo('locus-1')">Expression Atlas <span>Gene 01</span></div>
+      <div class="palette-item" onclick="jumpTo('locus-2')">Chromosome Map <span>Gene 02</span></div>
+      <div class="palette-item" onclick="jumpTo('locus-3')">The Pipeline <span>Gene 03</span></div>
+      <div class="palette-item" onclick="jumpTo('locus-4')">Security <span>Gene 04</span></div>
+      <div class="palette-item" onclick="jumpTo('locus-5')">Request Access <span>Terminator</span></div>
+      <div class="palette-item" onclick="window.location.href='gene.html'">Genomic Analyzer <span>External</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Bootstrap Navbar -->
+<nav class="navbar navbar-expand-lg gx-navbar fixed-top">
+  <div class="container-fluid px-4">
+    <a class="navbar-brand" href="#">GeneX</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#gxNav">
+      <span class="navbar-toggler-icon" style="filter: invert(1)"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="gxNav">
+      <ul class="navbar-nav ms-auto align-items-lg-center">
+        <li class="nav-item"><a class="nav-link active" href="#browser">Browser</a></li>
+        <li class="nav-item"><a class="nav-link" href="#features">Features</a></li>
+        <li class="nav-item"><a class="nav-link" href="#analyzer">Analyzer</a></li>
+        <li class="nav-item"><a class="nav-link" href="#workflow">Workflow</a></li>
+        <li class="nav-item"><a class="nav-link" href="#testimonials">Reviews</a></li>
+        <li class="nav-item ms-lg-3">
+          <a href="gene.html" class="btn btn-primary btn-sm">Launch Analyzer</a>
+        </li>
+        <li class="nav-item ms-lg-2">
+          <span class="nav-link" style="cursor:pointer" onclick="togglePalette()">⌘K</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Ruler -->
+<div class="ruler" id="ruler"><div class="ruler-track" id="ruler-track"></div></div>
+
+<!-- Minimap -->
+<div class="minimap" id="minimap">
+  <div class="minimap-locus" data-label="Expression Atlas" data-target="locus-1"></div>
+  <div class="minimap-locus" data-label="Chromosome Map" data-target="locus-2"></div>
+  <div class="minimap-locus" data-label="The Pipeline" data-target="locus-3"></div>
+  <div class="minimap-locus" data-label="Security" data-target="locus-4"></div>
+  <div class="minimap-locus" data-label="Access" data-target="locus-5"></div>
+</div>
+
+<!-- Hero Section -->
+<section class="hero-section" id="hero">
+  <canvas class="hero-canvas" id="hero-canvas"></canvas>
+  <div class="container hero-content">
+    <div class="row align-items-center">
+      <div class="col-lg-8 mx-auto text-center">
+        <div class="hero-badge" data-aos="fade-down">
+          <span class="pulse-dot"></span>
+          <span>GRCh38 · Live Sequencing</span>
+        </div>
+        <h1 class="hero-title" data-aos="fade-up" data-aos-delay="100">
+          Sequence <span class="accent typing-cursor" id="hero-typing">in</span>.<br>
+          Insight <span class="accent">out</span>.
+        </h1>
+        <p class="hero-subtitle mx-auto" data-aos="fade-up" data-aos-delay="200">
+          GeneX parses raw genomic records and renders them as expression atlases, chromosome maps, 3D structure, and regulatory networks — live, in the browser, down to the <code>codon</code>.
+        </p>
+        <div class="hero-cta justify-content-center" data-aos="fade-up" data-aos-delay="300">
+          <a href="gene.html" class="btn btn-primary btn-lg">
+            <i class="bi bi-cpu me-2"></i>Launch Analyzer
+          </a>
+          <a href="#browser" class="btn btn-outline-dark btn-lg">
+            <i class="bi bi-eye me-2"></i>Explore Browser
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Stats Section -->
+<section class="stats-section" id="stats">
+  <div class="container">
+    <div class="row g-4">
+      <div class="col-6 col-lg-3" data-aos="fade-up" data-aos-delay="0">
+        <div class="stat-card">
+          <div class="stat-icon"><i class="bi bi-speedometer2"></i></div>
+          <div class="stat-number" data-count="2">0</div>
+          <div class="stat-label">Second Parse</div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3" data-aos="fade-up" data-aos-delay="100">
+        <div class="stat-card">
+          <div class="stat-icon"><i class="bi bi-layers"></i></div>
+          <div class="stat-number" data-count="8">0</div>
+          <div class="stat-label">Live Modules</div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3" data-aos="fade-up" data-aos-delay="200">
+        <div class="stat-card">
+          <div class="stat-icon"><i class="bi bi-shield-check"></i></div>
+          <div class="stat-number" data-count="256">0</div>
+          <div class="stat-label">Bit Encryption</div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3" data-aos="fade-up" data-aos-delay="300">
+        <div class="stat-card">
+          <div class="stat-icon"><i class="bi bi-globe"></i></div>
+          <div class="stat-number" data-count="99">0</div>
+          <div class="stat-label">% Uptime</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features Section -->
+<section class="features-section" id="features">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8" data-aos="fade-up">
+        <div class="section-header">Platform Capabilities</div>
+        <h2 class="section-title">Eight ways to see every dataset.</h2>
+      </div>
+    </div>
+    <div class="row g-4 mt-2">
+      <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="0">
+        <div class="feature-card">
+          <div class="feature-icon"><i class="bi bi-bar-chart-line"></i></div>
+          <h3 class="feature-title">Expression Atlas</h3>
+          <p class="feature-desc">Bar and lollipop views of expression per gene, sortable on the fly and exportable as SVG. Color by fold-change or p-value.</p>
+          <a href="gene.html" class="feature-link">Open Analyzer <i class="bi bi-arrow-right"></i></a>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="100">
+        <div class="feature-card">
+          <div class="feature-icon" style="background: var(--blue-dim); color: var(--blue);"><i class="bi bi-map"></i></div>
+          <h3 class="feature-title">Chromosome Map</h3>
+          <p class="feature-desc">Genome-wide ideogram that lights up exactly where your markers land. Zoom from cytoband to base pair resolution.</p>
+          <a href="#karyotype" class="feature-link">View Map <i class="bi bi-arrow-right"></i></a>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="200">
+        <div class="feature-card">
+          <div class="feature-icon" style="background: var(--red-dim); color: var(--red);"><i class="bi bi-boxes"></i></div>
+          <h3 class="feature-title">3D Structure</h3>
+          <p class="feature-desc">Interactive double-helix viewer with mouse-reactive rotation. Inspect base-pair bonding in real-time 3D space.</p>
+          <a href="#helix" class="feature-link">View 3D <i class="bi bi-arrow-right"></i></a>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="0">
+        <div class="feature-card">
+          <div class="feature-icon" style="background: var(--yellow-dim); color: var(--yellow);"><i class="bi bi-filetype-json"></i></div>
+          <h3 class="feature-title">VCF Pipeline</h3>
+          <p class="feature-desc">Ingest any JSON or PDF. Profile computes karyotype, GC content, and peak expression the moment the file lands.</p>
+          <a href="gene.html" class="feature-link">Process Now <i class="bi bi-arrow-right"></i></a>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="100">
+        <div class="feature-card">
+          <div class="feature-icon" style="background: var(--purple-dim); color: var(--purple);"><i class="bi bi-heatmap"></i></div>
+          <h3 class="feature-title">Heatmap Panel</h3>
+          <p class="feature-desc">Tumor panel expression heatmaps with 20x20 gene grids. Hover for fold-change values and significance metrics.</p>
+          <a href="#heatmap" class="feature-link">Explore <i class="bi bi-arrow-right"></i></a>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="200">
+        <div class="feature-card">
+          <div class="feature-icon" style="background: rgba(139,26,26,0.08); color: #a33;"><i class="bi bi-shield-lock"></i></div>
+          <h3 class="feature-title">Molecular Security</h3>
+          <p class="feature-desc">AES-256 encryption in transit and at rest. Role-based access control with full audit trails for every export.</p>
+          <a href="#locus-4" class="feature-link">Security <i class="bi bi-arrow-right"></i></a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Analyzer CTA Section -->
+<section class="analyzer-section" id="analyzer">
+  <div class="container analyzer-content">
+    <div class="row align-items-center">
+      <div class="col-lg-6" data-aos="fade-right">
+        <div class="section-header">Genomic Analyzer</div>
+        <h2 class="section-title">Ready for deeper analysis?</h2>
+        <p class="section-subtitle">
+          Switch to the full Genomic Analyzer for advanced variant calling, population genetics, and custom pipeline workflows. Same dataset, deeper insights.
+        </p>
+        <a href="gene.html" class="analyzer-btn">
+          <i class="bi bi-box-arrow-up-right"></i>
+          Open Genomic Analyzer
+        </a>
+        <div class="mt-4 d-flex gap-4">
+          <div>
+            <div style="font-family: var(--mono); font-size: 1.25rem; font-weight: 500; color: var(--paper);">12</div>
+            <div style="font-family: var(--mono); font-size: 0.65rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.1em;">Pipelines</div>
+          </div>
+          <div>
+            <div style="font-family: var(--mono); font-size: 1.25rem; font-weight: 500; color: var(--paper);">4K</div>
+            <div style="font-family: var(--mono); font-size: 0.65rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.1em;">Genomes/hr</div>
+          </div>
+          <div>
+            <div style="font-family: var(--mono); font-size: 1.25rem; font-weight: 500; color: var(--paper);">0.99</div>
+            <div style="font-family: var(--mono); font-size: 0.65rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.1em;">Precision</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-5 offset-lg-1" data-aos="fade-left">
+        <div class="analyzer-preview">
+          <div class="analyzer-metric">
+            <span class="analyzer-metric-label">Variant Caller</span>
+            <span class="analyzer-metric-value">GATK HaplotypeCaller</span>
+          </div>
+          <div class="analyzer-metric">
+            <span class="analyzer-metric-label">Alignment</span>
+            <span class="analyzer-metric-value">BWA-MEM2</span>
+          </div>
+          <div class="analyzer-metric">
+            <span class="analyzer-metric-label">Annotation</span>
+            <span class="analyzer-metric-value">VEP + ClinVar</span>
+          </div>
+          <div class="analyzer-metric">
+            <span class="analyzer-metric-label">Population</span>
+            <span class="analyzer-metric-value">gnomAD v4.0</span>
+          </div>
+          <div class="analyzer-metric">
+            <span class="analyzer-metric-label">Export</span>
+            <span class="analyzer-metric-value">VCF, BAM, SVG, PDF</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Workflow Section -->
+<section class="workflow-section" id="workflow">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-6" data-aos="fade-up">
+        <div class="section-header">The Pipeline</div>
+        <h2 class="section-title">Three steps. Same tab.</h2>
+      </div>
+    </div>
+    <div class="row mt-5">
+      <div class="col-lg-8" data-aos="fade-up">
+        <div class="workflow-step">
+          <div class="workflow-icon"><i class="bi bi-upload"></i></div>
+          <div class="workflow-content">
+            <h4>Ingest</h4>
+            <p>Drop any FASTQ, BAM, VCF, or CSV. Auto-detect format and validate checksums in under 500ms.</p>
+          </div>
+        </div>
+        <div class="workflow-step">
+          <div class="workflow-icon" style="background: var(--blue-dim); color: var(--blue);"><i class="bi bi-cpu"></i></div>
+          <div class="workflow-content">
+            <h4>Profile</h4>
+            <p>Compute karyotype, GC content, peak expression, and variant quality scores in real-time.</p>
+          </div>
+        </div>
+        <div class="workflow-step">
+          <div class="workflow-icon" style="background: var(--yellow-dim); color: var(--yellow);"><i class="bi bi-download"></i></div>
+          <div class="workflow-content">
+            <h4>Export</h4>
+            <p>Download SVG charts, annotated VCFs, or full pipeline reports. Timestamped and traceable.</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4 d-none d-lg-block" data-aos="fade-left">
+        <div class="p-4 border rounded-3 bg-white" style="border-color: var(--faint) !important;">
+          <div class="mb-3">
+            <div class="d-flex justify-content-between mb-1">
+              <span style="font-family: var(--mono); font-size: 0.65rem; color: var(--dim);">Upload Progress</span>
+              <span style="font-family: var(--mono); font-size: 0.65rem; color: var(--green);">87%</span>
+            </div>
+            <div class="progress" style="height: 4px; background: var(--faint);">
+              <div class="progress-bar" style="width: 87%; background: var(--green);"></div>
+            </div>
+          </div>
+          <div class="mb-3">
+            <div class="d-flex justify-content-between mb-1">
+              <span style="font-family: var(--mono); font-size: 0.65rem; color: var(--dim);">Variant Calling</span>
+              <span style="font-family: var(--mono); font-size: 0.65rem; color: var(--blue);">Running</span>
+            </div>
+            <div class="progress" style="height: 4px; background: var(--faint);">
+              <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 45%; background: var(--blue);"></div>
+            </div>
+          </div>
+          <div>
+            <div class="d-flex justify-content-between mb-1">
+              <span style="font-family: var(--mono); font-size: 0.65rem; color: var(--dim);">Report Gen</span>
+              <span style="font-family: var(--mono); font-size: 0.65rem; color: var(--dim);">Queued</span>
+            </div>
+            <div class="progress" style="height: 4px; background: var(--faint);">
+              <div class="progress-bar" style="width: 0%; background: var(--yellow);"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Testimonials Section -->
+<section class="testimonials-section" id="testimonials">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 mx-auto text-center" data-aos="fade-up">
+        <div class="section-header">Trusted by Labs</div>
+        <h2 class="section-title mx-auto">What researchers say.</h2>
+      </div>
+    </div>
+    <div class="row g-4 mt-2">
+      <div class="col-md-4" data-aos="fade-up" data-aos-delay="0">
+        <div class="testimonial-card">
+          <div class="testimonial-quote">
+            "GeneX reduced our variant analysis time from 4 hours to 12 minutes. The browser interface is intuitive enough for our clinical team."
+          </div>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">DR</div>
+            <div>
+              <div class="testimonial-name">Dr. Elena Rostova</div>
+              <div class="testimonial-role">Director, Genomics Institute</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4" data-aos="fade-up" data-aos-delay="100">
+        <div class="testimonial-card">
+          <div class="testimonial-quote">
+            "The 3D helix visualization helped us identify a novel binding pattern that static viewers completely missed."
+          </div>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">MK</div>
+            <div>
+              <div class="testimonial-name">Dr. Marcus Kim</div>
+              <div class="testimonial-role">Structural Bioinformatics</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4" data-aos="fade-up" data-aos-delay="200">
+        <div class="testimonial-card">
+          <div class="testimonial-quote">
+            "Finally, a genome browser that works on my iPad during fieldwork. Mobile-first design actually delivered."
+          </div>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">SJ</div>
+            <div>
+              <div class="testimonial-name">Dr. Sarah Jenkins</div>
+              <div class="testimonial-role">Field Genomics, Kenya</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Browser Tracks -->
+<div id="browser">
+
+  <!-- Reference Track -->
+  <div class="track ref-track">
+    <div class="track-label">Ref</div>
+    <div class="track-data" id="ref-track"></div>
+  </div>
+
+  <!-- Gene Track -->
+  <div class="track gene-track">
+    <div class="track-label">Gene</div>
+    <div class="track-data" id="gene-track">
+      <div id="polymerase"></div>
+    </div>
+  </div>
+
+  <!-- Variant Track -->
+  <div class="track variant-track">
+    <div class="track-label">Var</div>
+    <div class="track-data" id="variant-track"></div>
+  </div>
+
+  <!-- Alignment Track -->
+  <div class="track align-track">
+    <div class="track-label">Align</div>
+    <div class="track-data" id="align-track"></div>
+  </div>
+
+  <!-- Chromatogram -->
+  <div class="track chroma-track">
+    <div class="track-label">Trace</div>
+    <div class="track-data">
+      <svg class="chroma-svg" id="chroma-svg" viewBox="0 0 1200 140" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="gradA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--green)" stop-opacity="0.4"/><stop offset="100%" stop-color="var(--green)" stop-opacity="0"/></linearGradient>
+          <linearGradient id="gradT" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--red)" stop-opacity="0.4"/><stop offset="100%" stop-color="var(--red)" stop-opacity="0"/></linearGradient>
+          <linearGradient id="gradG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--yellow)" stop-opacity="0.4"/><stop offset="100%" stop-color="var(--yellow)" stop-opacity="0"/></linearGradient>
+          <linearGradient id="gradC" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--blue)" stop-opacity="0.4"/><stop offset="100%" stop-color="var(--blue)" stop-opacity="0"/></linearGradient>
+        </defs>
+        <path id="fillA" class="trace-fill" d="" fill="url(#gradA)"/>
+        <path id="fillT" class="trace-fill" d="" fill="url(#gradT)"/>
+        <path id="fillG" class="trace-fill" d="" fill="url(#gradG)"/>
+        <path id="fillC" class="trace-fill" d="" fill="url(#gradC)"/>
+        <path id="pathA" class="trace-path" d="" fill="none" stroke="var(--green)" stroke-width="1.5"/>
+        <path id="pathT" class="trace-path" d="" fill="none" stroke="var(--red)" stroke-width="1.5"/>
+        <path id="pathG" class="trace-path" d="" fill="none" stroke="var(--yellow)" stroke-width="1.5" opacity="0.6"/>
+        <path id="pathC" class="trace-path" d="" fill="none" stroke="var(--blue)" stroke-width="1.5" opacity="0.6"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Base Caller -->
+  <div class="track base-track">
+    <div class="track-label">Base</div>
+    <div class="track-data" id="base-caller"></div>
+  </div>
+
+  <!-- Quality -->
+  <div class="track quality-track">
+    <div class="track-label">Qual</div>
+    <div class="track-data" id="quality-track"></div>
+  </div>
+
+  <!-- Coverage -->
+  <div class="track coverage-track">
+    <div class="track-label">Cov</div>
+    <svg class="coverage-path" id="coverage-svg" viewBox="0 0 1200 72" preserveAspectRatio="none">
+      <path id="coverage-path" d="" fill="var(--green-dim)" stroke="var(--green)" stroke-width="1" opacity="0.3"/>
+    </svg>
+  </div>
+
+  <!-- Locus 1 -->
+  <div class="locus" id="locus-1" data-detail="expression">
+    <div class="locus-header">Gene 01 · Expression Atlas · chr1:1,240,000-1,245,000</div>
+    <div class="locus-title">Sequence <span class="accent">in</span>.<br>Insight <span class="accent">out</span>.</div>
+    <div class="locus-body">GeneX parses raw genomic records and renders them as expression atlases, chromosome maps, 3D structure, and regulatory networks — live, in the browser, down to the <code>codon</code>.</div>
+    <div class="locus-meta">
+      <span><span class="meta-dot green"></span>8 Live Modules</span>
+      <span><span class="meta-dot red"></span>&lt;2s Parse</span>
+      <span><span class="meta-dot blue"></span>64 Codons</span>
+    </div>
+    <a href="gene.html" class="action">Launch Analyzer →</a>
+  </div>
+
+  <!-- Coverage Spacer -->
+  <div class="track coverage-track">
+    <div class="track-label">Cov</div>
+    <svg class="coverage-path" viewBox="0 0 1200 72" preserveAspectRatio="none">
+      <path d="M0,60 Q100,40 200,55 T400,45 T600,50 T800,35 T1000,55 T1200,50 L1200,72 L0,72 Z" fill="var(--blue-dim)" stroke="var(--blue)" stroke-width="1" opacity="0.3"/>
+    </svg>
+  </div>
+
+  <!-- Locus 2 -->
+  <div class="locus" id="locus-2" data-detail="map">
+    <div class="locus-header">Gene 02 · Chromosome Map · chr1:5,680,000-5,690,000</div>
+    <div class="locus-title">One dataset.<br><span class="accent">Eight</span> ways to see it.</div>
+    <div class="locus-body">Every view runs on the same upload — no separate exports, no rebuilding charts. Expression, ideogram, nucleotide profile, sequence viewer, 3D helix, network, table, and command palette.</div>
+    <div class="locus-meta">
+      <span><span class="meta-dot yellow"></span>SVG Export</span>
+      <span><span class="meta-dot green"></span>Live Sort</span>
+      <span><span class="meta-dot blue"></span>WebGL</span>
+    </div>
+    <a href="#" class="action" onclick="openDetail('map'); return false;">View Details →</a>
+  </div>
+
+  <!-- Coverage Spacer -->
+  <div class="track coverage-track">
+    <div class="track-label">Cov</div>
+    <svg class="coverage-path" viewBox="0 0 1200 72" preserveAspectRatio="none">
+      <path d="M0,50 Q150,30 300,45 T600,35 T900,50 T1200,40 L1200,72 L0,72 Z" fill="var(--yellow-dim)" stroke="var(--yellow)" stroke-width="1" opacity="0.3"/>
+    </svg>
+  </div>
+
+  <!-- Locus 3 -->
+  <div class="locus" id="locus-3" data-detail="pipeline">
+    <div class="locus-header">Gene 03 · The Pipeline · chr1:12,400,000-12,410,000</div>
+    <div class="locus-title">Three steps.<br><span class="accent">Same</span> tab.</div>
+    <div class="locus-body">Ingest any JSON or PDF. Profile computes karyotype, GC content, and peak expression the moment the file lands. Explore through eight live views, then export exactly what you need.</div>
+    <div class="locus-meta">
+      <span><span class="meta-dot red"></span>Ingest</span>
+      <span><span class="meta-dot green"></span>Profile</span>
+      <span><span class="meta-dot blue"></span>Export</span>
+    </div>
+    <a href="gene.html" class="action">Open Analyzer →</a>
+  </div>
+
+  <!-- Coverage Spacer -->
+  <div class="track coverage-track">
+    <div class="track-label">Cov</div>
+    <svg class="coverage-path" viewBox="0 0 1200 72" preserveAspectRatio="none">
+      <path d="M0,55 Q200,25 400,50 T800,30 T1200,55 L1200,72 L0,72 Z" fill="var(--red-dim)" stroke="var(--red)" stroke-width="1" opacity="0.3"/>
+    </svg>
+  </div>
+
+  <!-- Locus 4 -->
+  <div class="locus" id="locus-4" data-detail="security">
+    <div class="locus-header">Gene 04 · Security · chr1:24,800,000-24,805,000</div>
+    <div class="locus-title">Molecular <span class="accent">level</span><br>security.</div>
+    <div class="locus-body">Encrypted in transit and at rest. Configurable data residency. Role-based access control. Every CSV and SVG export is timestamped and traceable.</div>
+    <div class="locus-meta">
+      <span><span class="meta-dot green"></span>AES-256</span>
+      <span><span class="meta-dot red"></span>RBAC</span>
+      <span><span class="meta-dot blue"></span>Audit</span>
+    </div>
+    <a href="#" class="action" onclick="openDetail('security'); return false;">View Details →</a>
+  </div>
+
+  <!-- Coverage Spacer -->
+  <div class="track coverage-track">
+    <div class="track-label">Cov</div>
+    <svg class="coverage-path" viewBox="0 0 1200 72" preserveAspectRatio="none">
+      <path d="M0,45 Q100,60 200,40 T400,55 T600,35 T800,50 T1000,30 T1200,45 L1200,72 L0,72 Z" fill="var(--purple-dim)" stroke="var(--purple)" stroke-width="1" opacity="0.3"/>
+    </svg>
+  </div>
+
+  <!-- Locus 5 -->
+  <div class="locus" id="locus-5" data-detail="access">
+    <div class="locus-header">Terminator · Access · chr1:31,000,000-31,001,000</div>
+    <div class="locus-title">Your next finding<br>is already in your data.</div>
+    <div class="locus-body">Request access and upload your first dataset the same day. No spreadsheet macros required.</div>
+    <div class="locus-meta">
+      <span><span class="meta-dot green"></span>Same Day</span>
+      <span><span class="meta-dot yellow"></span>Free Trial</span>
+      <span><span class="meta-dot purple"></span>24/7 Support</span>
+    </div>
+    <a href="gene.html" class="action">Request Access →</a>
+  </div>
+
+  <!-- Karyotype Section -->
+  <div class="karyotype-section" id="karyotype">
+    <div class="karyotype-header">Karyotype Overview · GRCh38</div>
+    <div class="karyotype-grid" id="karyotype-grid"></div>
+  </div>
+
+  <!-- 3D Helix Section -->
+  <div class="helix-section" id="helix">
+    <div class="helix-header">3D Structure Viewer</div>
+    <div class="helix-stage">
+      <div class="helix-3d" id="helix-3d"></div>
+    </div>
+  </div>
+
+  <!-- Gene Model Section -->
+  <div class="genemodel-section" id="genemodel">
+    <div class="genemodel-header">Gene Model · BRCA1</div>
+    <div class="genemodel-track" id="genemodel-track"></div>
+  </div>
+
+  <!-- Read Pileup Section -->
+  <div class="pileup-section" id="pileup">
+    <div class="pileup-header">Read Alignment · chr1:1,240,500-1,241,000</div>
+    <div class="pileup-track" id="pileup-track"></div>
+  </div>
+
+  <!-- Heatmap Section -->
+  <div class="heatmap-section" id="heatmap">
+    <div class="heatmap-header">Expression Heatmap · Tumor Panel</div>
+    <div class="heatmap-grid" id="heatmap-grid"></div>
+  </div>
+
+  <!-- VCF Table Section -->
+  <div class="vcf-section" id="vcf">
+    <div class="vcf-header">Variant Call Format · chr1</div>
+    <div class="table-responsive">
+      <table class="vcf-table">
+        <thead>
+          <tr>
+            <th>CHROM</th>
+            <th>POS</th>
+            <th>ID</th>
+            <th>REF</th>
+            <th>ALT</th>
+            <th>QUAL</th>
+            <th>FILTER</th>
+            <th>INFO</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="vcf-chr">chr1</td><td class="vcf-pos">1,240,532</td><td>.</td><td class="vcf-ref">A</td><td class="vcf-alt">G</td><td class="vcf-qual">99.7</td><td class="vcf-filter">PASS</td><td>DP=45;AF=0.52</td></tr>
+          <tr><td class="vcf-chr">chr1</td><td class="vcf-pos">1,240,891</td><td>rs112</td><td class="vcf-ref">C</td><td class="vcf-alt">T</td><td class="vcf-qual">87.3</td><td class="vcf-filter">PASS</td><td>DP=38;AF=0.31</td></tr>
+          <tr><td class="vcf-chr">chr1</td><td class="vcf-pos">1,241,204</td><td>.</td><td class="vcf-ref">G</td><td class="vcf-alt">A</td><td class="vcf-qual">42.1</td><td class="vcf-filter fail">LowQual</td><td>DP=12;AF=0.08</td></tr>
+          <tr><td class="vcf-chr">chr1</td><td class="vcf-pos">1,241,556</td><td>rs445</td><td class="vcf-ref">T</td><td class="vcf-alt">C</td><td class="vcf-qual">156.2</td><td class="vcf-filter">PASS</td><td>DP=67;AF=0.89</td></tr>
+          <tr><td class="vcf-chr">chr1</td><td class="vcf-pos">1,242,001</td><td>.</td><td class="vcf-ref">A</td><td class="vcf-alt">-</td><td class="vcf-qual">78.5</td><td class="vcf-filter">PASS</td><td>DP=29;AF=0.45</td></tr>
+          <tr><td class="vcf-chr">chr1</td><td class="vcf-pos">1,242,340</td><td>rs778</td><td class="vcf-ref">C</td><td class="vcf-alt">G</td><td class="vcf-qual">203.4</td><td class="vcf-filter">PASS</td><td>DP=82;AF=0.95</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Completion -->
+  <div class="completion" id="completion">
+    <div class="completion-header">Sequencing Complete</div>
+    <h2>Your next finding is already in your data.</h2>
+    <p style="color: var(--dim); max-width: 400px; margin: 0 auto; line-height: 1.7;">Request access and upload your first dataset the same day. No spreadsheet macros required.</p>
+    <div class="d-flex justify-content-center gap-3 mt-4 flex-wrap">
+      <a href="gene.html" class="btn btn-primary btn-lg">
+        <i class="bi bi-box-arrow-up-right me-2"></i>Open Analyzer
+      </a>
+    </div>
+    <form class="completion-form mt-4" onsubmit="event.preventDefault(); showToast('Access requested. We will reach out within 2 business days.'); this.innerHTML='<div style=\'padding: 12px 20px; font-family: var(--mono); font-size: 13px; color: var(--green);\'>Access requested. We will reach out within 2 business days.</div>';"></form>
+
+</div>
+
+<!-- Detail Panel -->
+<div class="detail-panel" id="detail-panel">
+  <button class="detail-close" onclick="closeDetail()">×</button>
+  <div class="detail-header" id="detail-header">Gene Detail</div>
+  <div class="detail-title" id="detail-title">Expression Atlas</div>
+  <div class="detail-body" id="detail-body">Detailed information about this genomic feature.</div>
+  <div class="detail-metrics" id="detail-metrics"></div>
+  <a href="gene.html" class="action mb-3 d-inline-block">Open in Analyzer →</a><br>
+  <a href="#" class="action" onclick="closeDetail(); return false;">Close</a>
+</div>
+
+<!-- Footer -->
+<footer class="gx-footer">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-4 mb-4">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <span style="width: 10px; height: 10px; border-radius: 50%; background: var(--green); display: inline-block;"></span>
+          <span style="font-family: var(--font); font-weight: 600; font-size: 1.1rem;">GeneX</span>
+        </div>
+        <p style="font-size: 0.875rem; color: var(--dim); max-width: 300px; line-height: 1.6;">
+          Genomic intelligence platform for researchers, clinicians, and bioinformaticians. Built for the browser, designed for discovery.
+        </p>
+      </div>
+      <div class="col-6 col-lg-2 mb-4">
+        <h5>Product</h5>
+        <ul class="list-unstyled">
+          <li class="mb-2"><a href="#browser">Browser</a></li>
+          <li class="mb-2"><a href="gene.html">Analyzer</a></li>
+          <li class="mb-2"><a href="#features">Features</a></li>
+          <li class="mb-2"><a href="#">Pricing</a></li>
+        </ul>
+      </div>
+      <div class="col-6 col-lg-2 mb-4">
+        <h5>Resources</h5>
+        <ul class="list-unstyled">
+          <li class="mb-2"><a href="#">Documentation</a></li>
+          <li class="mb-2"><a href="#">API Reference</a></li>
+          <li class="mb-2"><a href="#">Changelog</a></li>
+          <li class="mb-2"><a href="#">Status</a></li>
+        </ul>
+      </div>
+      <div class="col-6 col-lg-2 mb-4">
+        <h5>Company</h5>
+        <ul class="list-unstyled">
+          <li class="mb-2"><a href="#">About</a></li>
+          <li class="mb-2"><a href="#">Blog</a></li>
+          <li class="mb-2"><a href="#">Careers</a></li>
+          <li class="mb-2"><a href="#">Contact</a></li>
+        </ul>
+      </div>
+      <div class="col-6 col-lg-2 mb-4">
+        <h5>Legal</h5>
+        <ul class="list-unstyled">
+          <li class="mb-2"><a href="#">Privacy</a></li>
+          <li class="mb-2"><a href="#">Terms</a></li>
+          <li class="mb-2"><a href="#">Security</a></li>
+          <li class="mb-2"><a href="#">Compliance</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div style="font-family: var(--mono); font-size: 0.7rem; color: var(--dim);">
+        © 2026 GeneX Genomic Intelligence. All rights reserved.
+      </div>
+      <div class="d-flex gap-3">
+        <a href="#"><i class="bi bi-twitter-x"></i></a>
+        <a href="#"><i class="bi bi-github"></i></a>
+        <a href="#"><i class="bi bi-linkedin"></i></a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- Bottom Bar (Desktop) -->
+<div class="bottom-bar d-none d-md-flex">
+  <div class="bottom-bar-left">GeneX · Genomic Intelligence</div>
+  <div class="bottom-bar-right">
+    <span style="cursor:pointer" onclick="showToast('Platform: v3.0.2')">Platform</span>
+    <span style="cursor:pointer" onclick="showToast('Method: Illumina NovaSeq 6000')">Method</span>
+    <span style="cursor:pointer" onclick="showToast('Security: AES-256-GCM')">Security</span>
+    <span style="cursor:pointer" onclick="showToast('Contact: team@genex.bio')">Contact</span>
+  </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<!-- AOS JS -->
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   GENEX ENHANCED v4.0 — Mobile-First + Bootstrap + New Sections
+═══════════════════════════════════════════════════════════════════════ */
+
+const isTouch = window.matchMedia('(pointer: coarse)').matches;
+
+/* ─── Initialize AOS ─── */
+AOS.init({
+  duration: 800,
+  easing: 'ease-out-cubic',
+  once: true,
+  offset: 50
+});
+
+/* ─── Toast System ─── */
+function showToast(message) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'gx-toast';
+  toast.innerHTML = `<i class="bi bi-check-circle-fill" style="color: var(--green);"></i> ${message}`;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(10px)';
+    setTimeout(() => toast.remove(), 400);
+  }, 3000);
+}
+
+/* ─── Data ─── */
+const detailData = {
+  expression: {
+    header: 'Gene 01 · Expression Atlas',
+    title: 'Expression Atlas',
+    body: 'Bar and lollipop views of expression per gene, sortable on the fly and exportable as SVG. Color by fold-change or p-value. Live sorting with zero latency.',
+    metrics: [
+      { label: 'Visualization Type', value: 'Bar / Lollipop' },
+      { label: 'Export Format', value: 'SVG, PNG' },
+      { label: 'Sortable', value: 'Yes' },
+      { label: 'Color By', value: 'p-value, FC' }
+    ]
+  },
+  map: {
+    header: 'Gene 02 · Chromosome Map',
+    title: 'Chromosome Ideogram',
+    body: 'A genome-wide map that lights up exactly where your markers land, by chromosome. Zoom from cytoband to base pair resolution.',
+    metrics: [
+      { label: 'Resolution', value: 'Base-pair' },
+      { label: 'Chromosomes', value: '23 pairs' },
+      { label: 'Zoom', value: 'Infinite' },
+      { label: 'Markers', value: 'Unlimited' }
+    ]
+  },
+  pipeline: {
+    header: 'Gene 03 · The Pipeline',
+    title: 'Three-Step Pipeline',
+    body: 'Ingest any JSON or PDF. Profile computes karyotype, GC content, and peak expression the moment the file lands.',
+    metrics: [
+      { label: 'Step 1', value: 'Ingest' },
+      { label: 'Step 2', value: 'Profile' },
+      { label: 'Step 3', value: 'Export' },
+      { label: 'Parse Time', value: '< 2 seconds' }
+    ]
+  },
+  security: {
+    header: 'Gene 04 · Security',
+    title: 'Molecular Security',
+    body: 'Encrypted in transit and at rest. Configurable data residency. Role-based access control. Full audit trail.',
+    metrics: [
+      { label: 'Encryption', value: 'AES-256' },
+      { label: 'Residency', value: 'Configurable' },
+      { label: 'Access Control', value: 'RBAC' },
+      { label: 'Audit', value: 'Full Trail' }
+    ]
+  },
+  access: {
+    header: 'Terminator · Access',
+    title: 'Request Access',
+    body: 'Request access and upload your first dataset the same day. No spreadsheet macros required. Free trial available.',
+    metrics: [
+      { label: 'Setup Time', value: 'Same Day' },
+      { label: 'Cost', value: 'Free Trial' },
+      { label: 'Support', value: '24/7' },
+      { label: 'Contract', value: 'None' }
+    ]
+  }
+};
+
+/* ─── Boot Sequence ─── */
+function runBoot() {
+  const lines = [
+    { id: 'boot-1', delay: 300 },
+    { id: 'boot-2', delay: 800 },
+    { id: 'boot-3', delay: 1400 },
+    { id: 'boot-4', delay: 2000 },
+    { id: 'boot-5', delay: 2600 }
+  ];
+
+  document.getElementById('boot-progress').classList.add('visible');
+
+  lines.forEach((line, i) => {
+    setTimeout(() => {
+      const el = document.getElementById(line.id);
+      el.classList.add('visible');
+      if (i === 4) el.innerHTML = '<span>Ready</span> <span class="ok">OK</span>';
+
+      const fill = document.getElementById('boot-fill');
+      fill.style.width = ((i + 1) / lines.length * 100) + '%';
+    }, line.delay);
+  });
+
+  setTimeout(() => {
+    document.getElementById('boot').classList.add('done');
+  }, 3500);
+}
+runBoot();
+
+/* ─── Navbar Scroll Effect ─── */
+const navbar = document.querySelector('.gx-navbar');
+window.addEventListener('scroll', () => {
+  if (window.scrollY > 50) {
+    navbar.classList.add('scrolled');
+  } else {
+    navbar.classList.remove('scrolled');
+  }
+}, { passive: true });
+
+/* ─── Cursor (desktop only) ─── */
+if (!isTouch) {
+  const cursor = document.getElementById('cursor');
+  document.addEventListener('mousemove', (e) => {
+    cursor.style.left = e.clientX + 'px';
+    cursor.style.top = e.clientY + 'px';
+  });
+}
+
+/* ─── Read Head ─── */
+const readHead = document.getElementById('read-head');
+const coordDisplay = document.getElementById('coord-display');
+document.addEventListener('mousemove', (e) => {
+  readHead.style.left = e.clientX + 'px';
+  const genomePos = Math.floor(1 + (e.clientX / window.innerWidth) * 3200000000);
+  coordDisplay.textContent = 'chr1:' + genomePos.toLocaleString();
+});
+
+/* ─── Ruler ─── */
+const rulerTrack = document.getElementById('ruler-track');
+function updateRuler() {
+  const scrollX = window.scrollX || window.pageXOffset;
+  const start = Math.floor(scrollX / 100) * 100;
+  let html = '';
+  for (let i = 0; i < 20; i++) {
+    const pos = start + i * 100;
+    const left = pos - scrollX;
+    if (pos % 500 === 0) {
+      html += `<div class="ruler-tick major" style="left:${left}px"></div>`;
+      html += `<div class="ruler-label" style="left:${left}px">${(pos * 100000).toLocaleString()}</div>`;
+    } else {
+      html += `<div class="ruler-tick" style="left:${left}px"></div>`;
+    }
+  }
+  rulerTrack.innerHTML = html;
+}
+window.addEventListener('scroll', updateRuler, { passive: true });
+window.addEventListener('resize', updateRuler);
+
+/* ─── Hero Canvas DNA Animation ─── */
+const heroCanvas = document.getElementById('hero-canvas');
+const heroCtx = heroCanvas.getContext('2d');
+let heroW, heroH;
+
+function resizeHeroCanvas() {
+  heroW = heroCanvas.width = heroCanvas.offsetWidth;
+  heroH = heroCanvas.height = heroCanvas.offsetHeight;
+}
+resizeHeroCanvas();
+window.addEventListener('resize', resizeHeroCanvas);
+
+const dnaParticles = [];
+const dnaCount = 60;
+for (let i = 0; i < dnaCount; i++) {
+  dnaParticles.push({
+    x: Math.random() * heroW,
+    y: Math.random() * heroH,
+    vx: (Math.random() - 0.5) * 0.5,
+    vy: (Math.random() - 0.5) * 0.5,
+    base: ['A', 'T', 'G', 'C'][Math.floor(Math.random() * 4)],
+    size: 2 + Math.random() * 3,
+    opacity: 0.1 + Math.random() * 0.3
+  });
+}
+
+function drawHero() {
+  heroCtx.clearRect(0, 0, heroW, heroH);
+
+  // Draw connections
+  for (let i = 0; i < dnaParticles.length; i++) {
+    for (let j = i + 1; j < dnaParticles.length; j++) {
+      const dx = dnaParticles[i].x - dnaParticles[j].x;
+      const dy = dnaParticles[i].y - dnaParticles[j].y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 150) {
+        heroCtx.beginPath();
+        heroCtx.moveTo(dnaParticles[i].x, dnaParticles[i].y);
+        heroCtx.lineTo(dnaParticles[j].x, dnaParticles[j].y);
+        heroCtx.strokeStyle = `rgba(45, 80, 22, ${0.1 * (1 - dist / 150)})`;
+        heroCtx.lineWidth = 0.5;
+        heroCtx.stroke();
+      }
+    }
+  }
+
+  // Draw particles
+  dnaParticles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    if (p.x < 0 || p.x > heroW) p.vx *= -1;
+    if (p.y < 0 || p.y > heroH) p.vy *= -1;
+
+    heroCtx.beginPath();
+    heroCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    const colors = { A: '#2D5016', T: '#8B1A1A', G: '#B8860B', C: '#1E3A5F' };
+    heroCtx.fillStyle = colors[p.base];
+    heroCtx.globalAlpha = p.opacity;
+    heroCtx.fill();
+    heroCtx.globalAlpha = 1;
+  });
+
+  requestAnimationFrame(drawHero);
+}
+drawHero();
+
+/* ─── Typing Effect ─── */
+const typingEl = document.getElementById('hero-typing');
+const typingWords = ['in', 'out', 'deep', 'live'];
+let typingIdx = 0;
+let typingChar = 0;
+let typingDeleting = false;
+
+function typeEffect() {
+  const word = typingWords[typingIdx];
+  if (typingDeleting) {
+    typingChar--;
+    if (typingChar < 0) {
+      typingDeleting = false;
+      typingIdx = (typingIdx + 1) % typingWords.length;
+    }
+  } else {
+    typingChar++;
+    if (typingChar > word.length) {
+      typingDeleting = true;
+      setTimeout(typeEffect, 1500);
+      return;
+    }
+  }
+  typingEl.textContent = word.substring(0, typingChar);
+  setTimeout(typeEffect, typingDeleting ? 100 : 200);
+}
+setTimeout(typeEffect, 2000);
+
+/* ─── Counter Animation ─── */
+const statNumbers = document.querySelectorAll('.stat-number');
+const counterObs = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const el = entry.target;
+      const target = parseInt(el.dataset.count);
+      const duration = 2000;
+      const step = target / (duration / 16);
+      let current = 0;
+      const timer = setInterval(() => {
+        current += step;
+        if (current >= target) {
+          el.textContent = target + (target === 99 ? '%' : target === 256 ? '' : '+');
+          clearInterval(timer);
+        } else {
+          el.textContent = Math.floor(current) + (target === 99 ? '%' : target === 256 ? '' : '+');
+        }
+      }, 16);
+      counterObs.unobserve(el);
+    }
+  });
+}, { threshold: 0.5 });
+statNumbers.forEach(n => counterObs.observe(n));
+
+/* ─── Generate Reference Bases ─── */
+const refTrack = document.getElementById('ref-track');
+const baseColors = { A: 'var(--green)', T: 'var(--red)', G: 'var(--yellow)', C: 'var(--blue)' };
+const bases = ['A', 'T', 'G', 'C'];
+for (let i = 0; i < 60; i++) {
+  const b = bases[Math.floor(Math.random() * 4)];
+  const el = document.createElement('span');
+  el.className = 'ref-base ' + b;
+  el.textContent = b;
+  el.style.left = (i * 1.6) + '%';
+  refTrack.appendChild(el);
+}
+
+/* ─── Generate Gene Annotations ─── */
+const geneTrack = document.getElementById('gene-track');
+const geneData = [
+  { left: '5%', width: '12%', name: 'BRCA1', color: 'var(--green)' },
+  { left: '22%', width: '8%', name: 'TP53', color: 'var(--red)' },
+  { left: '38%', width: '15%', name: 'EGFR', color: 'var(--blue)' },
+  { left: '58%', width: '10%', name: 'KRAS', color: 'var(--yellow)' },
+  { left: '75%', width: '14%', name: 'MYC', color: 'var(--purple)' },
+  { left: '92%', width: '6%', name: 'TER', color: 'var(--dim)' }
+];
+geneData.forEach(g => {
+  const el = document.createElement('div');
+  el.className = 'gene-annotation';
+  el.style.left = g.left;
+  el.style.width = g.width;
+  el.style.background = g.color;
+  el.innerHTML = g.name + '<div class="gene-tooltip">' + g.name + ' · ' + g.width + 'bp</div>';
+  geneTrack.appendChild(el);
+});
+
+/* ─── Generate Variants ─── */
+const variantTrack = document.getElementById('variant-track');
+const variantTypes = ['snp', 'indel', 'synonymous', 'snp', 'snp'];
+for (let i = 0; i < 40; i++) {
+  const el = document.createElement('div');
+  el.className = 'variant-tick ' + variantTypes[Math.floor(Math.random() * variantTypes.length)];
+  el.style.left = (2 + Math.random() * 96) + '%';
+  variantTrack.appendChild(el);
+}
+
+/* ─── Generate Alignments ─── */
+const alignTrack = document.getElementById('align-track');
+for (let i = 0; i < 30; i++) {
+  const el = document.createElement('div');
+  el.className = 'align-read';
+  el.style.left = (Math.random() * 90) + '%';
+  el.style.width = (5 + Math.random() * 20) + '%';
+  el.style.top = (10 + Math.random() * 60) + '%';
+  alignTrack.appendChild(el);
+}
+
+/* ─── Generate Base Caller ─── */
+const baseCaller = document.getElementById('base-caller');
+for (let i = 0; i < 50; i++) {
+  const b = bases[Math.floor(Math.random() * 4)];
+  const el = document.createElement('span');
+  el.className = 'base ' + b;
+  el.textContent = b;
+  el.style.left = (i * 2) + '%';
+  baseCaller.appendChild(el);
+}
+
+/* ─── Base Caller Scan Animation ─── */
+let scanIndex = 0;
+const baseEls = baseCaller.querySelectorAll('.base');
+setInterval(() => {
+  baseEls.forEach((b, i) => b.classList.toggle('scanning', i === scanIndex));
+  scanIndex = (scanIndex + 1) % baseEls.length;
+}, 600);
+
+/* ─── Generate Quality Bars ─── */
+const qualityTrack = document.getElementById('quality-track');
+const qualityBars = [];
+for (let i = 0; i < 100; i++) {
+  const bar = document.createElement('div');
+  bar.className = 'quality-bar';
+  const h = 20 + Math.random() * 80;
+  bar.style.left = (i) + '%';
+  bar.style.height = '0%';
+  qualityTrack.appendChild(bar);
+  qualityBars.push({ el: bar, targetH: h });
+}
+
+/* ─── Animate Quality Bars on Scroll ─── */
+const qualityObs = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      qualityBars.forEach((qb, i) => {
+        setTimeout(() => { qb.el.style.height = qb.targetH + '%'; }, i * 10);
+      });
+      qualityObs.disconnect();
+    }
+  });
+}, { threshold: 0.5 });
+qualityObs.observe(qualityTrack);
+
+/* ─── Animated Chromatogram Traces ─── */
+function generateChromaPath(offset, amp, phase) {
+  let d = 'M0,70 ';
+  for (let x = 0; x <= 1200; x += 10) {
+    const y = 70 + Math.sin((x + offset) * 0.02 + phase) * amp * Math.sin(x * 0.005) + Math.sin((x + offset) * 0.03) * amp * 0.5;
+    d += `L${x},${y} `;
+  }
+  return d;
+}
+
+function generateFillPath(offset, amp, phase) {
+  let d = 'M0,70 ';
+  for (let x = 0; x <= 1200; x += 10) {
+    const y = 70 + Math.sin((x + offset) * 0.02 + phase) * amp * Math.sin(x * 0.005) + Math.sin((x + offset) * 0.03) * amp * 0.5;
+    d += `L${x},${y} `;
+  }
+  d += 'L1200,140 L0,140 Z';
+  return d;
+}
+
+let chromaTime = 0;
+function animateChroma() {
+  chromaTime += 0.02;
+  document.getElementById('pathA').setAttribute('d', generateChromaPath(0, 25, chromaTime));
+  document.getElementById('pathT').setAttribute('d', generateChromaPath(100, 20, chromaTime + 1));
+  document.getElementById('pathG').setAttribute('d', generateChromaPath(200, 15, chromaTime + 2));
+  document.getElementById('pathC').setAttribute('d', generateChromaPath(300, 18, chromaTime + 3));
+  document.getElementById('fillA').setAttribute('d', generateFillPath(0, 25, chromaTime));
+  document.getElementById('fillT').setAttribute('d', generateFillPath(100, 20, chromaTime + 1));
+  document.getElementById('fillG').setAttribute('d', generateFillPath(200, 15, chromaTime + 2));
+  document.getElementById('fillC').setAttribute('d', generateFillPath(300, 18, chromaTime + 3));
+  requestAnimationFrame(animateChroma);
+}
+animateChroma();
+
+/* ─── Animated Coverage ─── */
+const coveragePath = document.getElementById('coverage-path');
+let coverageTime = 0;
+function animateCoverage() {
+  coverageTime += 0.01;
+  let d = 'M0,60 ';
+  for (let x = 0; x <= 1200; x += 20) {
+    const y = 60 + Math.sin((x + coverageTime * 50) * 0.01) * 20 + Math.sin((x + coverageTime * 30) * 0.02) * 10;
+    d += `L${x},${y} `;
+  }
+  d += 'L1200,72 L0,72 Z';
+  coveragePath.setAttribute('d', d);
+  requestAnimationFrame(animateCoverage);
+}
+animateCoverage();
+
+/* ─── Locus Scroll Animation ─── */
+const loci = document.querySelectorAll('.locus');
+const locusObs = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) entry.target.classList.add('in-view');
+  });
+}, { threshold: 0.2 });
+loci.forEach(l => locusObs.observe(l));
+
+/* ─── RNA Polymerase Scroll Tracking ─── */
+const polymerase = document.getElementById('polymerase');
+window.addEventListener('scroll', () => {
+  const scrollY = window.scrollY;
+  const docH = document.documentElement.scrollHeight - window.innerHeight;
+  const progress = scrollY / docH;
+  polymerase.style.left = (progress * 90 + 5) + '%';
+}, { passive: true });
+
+/* ─── Minimap Navigation ─── */
+const minimapLoci = document.querySelectorAll('.minimap-locus');
+minimapLoci.forEach(ml => {
+  ml.addEventListener('click', () => {
+    const target = document.getElementById(ml.dataset.target);
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+});
+
+/* ─── Active Minimap on Scroll ─── */
+window.addEventListener('scroll', () => {
+  const scrollY = window.scrollY;
+  const docH = document.documentElement.scrollHeight - window.innerHeight;
+  const progress = scrollY / docH;
+  const activeIdx = Math.min(Math.floor(progress * 5), 4);
+  minimapLoci.forEach((ml, i) => ml.classList.toggle('active', i === activeIdx));
+}, { passive: true });
+
+/* ─── Read Head Active State on Genes ─── */
+const geneEls = document.querySelectorAll('.gene-annotation');
+document.addEventListener('mousemove', (e) => {
+  const readHeadX = e.clientX;
+  let overGene = false;
+  geneEls.forEach(gene => {
+    const rect = gene.getBoundingClientRect();
+    if (readHeadX >= rect.left && readHeadX <= rect.right) overGene = true;
+  });
+  readHead.classList.toggle('active', overGene);
+});
+
+/* ─── Karyotype Generation with Real G-Banding ─── */
+const karyotypeGrid = document.getElementById('karyotype-grid');
+const chrSizes = [
+  { bands: 8 }, { bands: 7 }, { bands: 6 }, { bands: 5 }, { bands: 6 },
+  { bands: 7 }, { bands: 5 }, { bands: 4 }, { bands: 5 }, { bands: 6 },
+  { bands: 5 }, { bands: 6 }, { bands: 4 }, { bands: 5 }, { bands: 5 },
+  { bands: 4 }, { bands: 5 }, { bands: 4 }, { bands: 5 }, { bands: 4 },
+  { bands: 3 }, { bands: 4 }, { bands: 5 }, { bands: 3 }
+];
+
+chrSizes.forEach((chr, i) => {
+  const el = document.createElement('div');
+  el.className = 'chromosome';
+  let bandsHtml = '';
+  let top = 5;
+  for (let b = 0; b < chr.bands; b++) {
+    const height = (80 / chr.bands) - 2;
+    const isDark = Math.random() > 0.5;
+    bandsHtml += `<div class="chromosome-band ${isDark ? 'dark' : ''}" style="top:${top}%; height:${height}%;"></div>`;
+    top += height + 2;
+  }
+  const label = i < 22 ? (i + 1) : (i === 22 ? 'X' : 'Y');
+  el.innerHTML = `<div class="chromosome-body">${bandsHtml}</div><div class="chromosome-label">${label}</div><div class="chromosome-tooltip">chr${label} · ${(50 + Math.random() * 200).toFixed(1)} Mb</div>`;
+  karyotypeGrid.appendChild(el);
+});
+
+/* ─── 3D Helix with 20 Base Pairs ─── */
+const helix3d = document.getElementById('helix-3d');
+for (let i = 0; i < 20; i++) {
+  const b1 = bases[Math.floor(Math.random() * 4)];
+  const b2 = b1 === 'A' ? 'T' : b1 === 'T' ? 'A' : b1 === 'G' ? 'C' : 'G';
+  const pair = document.createElement('div');
+  pair.className = 'helix-base-pair';
+  pair.style.top = (i * 18) + 'px';
+  pair.style.transform = `translateX(-50%) rotateY(${i * 30}deg)`;
+  pair.innerHTML = `
+    <div class="helix-base ${b1}">${b1}</div>
+    <div class="helix-bond"></div>
+    <div class="helix-base ${b2}">${b2}</div>
+  `;
+  helix3d.appendChild(pair);
+}
+
+/* ─── Mouse-Reactive Helix ─── */
+document.addEventListener('mousemove', (e) => {
+  const x = (e.clientX / window.innerWidth - 0.5) * 30;
+  const y = (e.clientY / window.innerHeight - 0.5) * 10;
+  helix3d.style.transform = `rotateY(${x}deg) rotateX(${y}deg)`;
+});
+
+/* ─── Gene Model Track ─── */
+const genemodelTrack = document.getElementById('genemodel-track');
+const exons = [
+  { left: '5%', width: '8%', type: 'utr' },
+  { left: '15%', width: '12%', type: 'exon' },
+  { left: '30%', width: '3%', type: 'intron' },
+  { left: '35%', width: '15%', type: 'exon' },
+  { left: '53%', width: '3%', type: 'intron' },
+  { left: '58%', width: '10%', type: 'exon' },
+  { left: '70%', width: '3%', type: 'intron' },
+  { left: '75%', width: '8%', type: 'exon' },
+  { left: '85%', width: '5%', type: 'utr' }
+];
+exons.forEach((ex, i) => {
+  const el = document.createElement('div');
+  if (ex.type === 'exon') {
+    el.className = 'genemodel-exon';
+    el.style.left = ex.left;
+    el.style.width = ex.width;
+    el.title = 'Exon ' + (i + 1);
+  } else if (ex.type === 'utr') {
+    el.className = 'genemodel-utr';
+    el.style.left = ex.left;
+    el.style.width = ex.width;
+  } else {
+    el.className = 'genemodel-intron';
+    el.style.left = ex.left;
+    el.style.width = ex.width;
+  }
+  genemodelTrack.appendChild(el);
+});
+const strand = document.createElement('div');
+strand.className = 'genemodel-strand';
+genemodelTrack.appendChild(strand);
+
+/* ─── Read Pileup ─── */
+const pileupTrack = document.getElementById('pileup-track');
+for (let i = 0; i < 25; i++) {
+  const read = document.createElement('div');
+  read.className = 'pileup-read';
+  if (Math.random() > 0.85) read.classList.add('mismatch');
+  read.style.left = (Math.random() * 85) + '%';
+  read.style.width = (8 + Math.random() * 25) + '%';
+  read.style.top = (i * 7 + 5) + '%';
+  pileupTrack.appendChild(read);
+}
+
+/* ─── Heatmap Generation ─── */
+const heatmapGrid = document.getElementById('heatmap-grid');
+const heatColors = ['var(--green-dim)', 'var(--green)', 'var(--yellow-dim)', 'var(--yellow)', 'var(--red-dim)', 'var(--red)'];
+for (let i = 0; i < 200; i++) {
+  const cell = document.createElement('div');
+  cell.className = 'heatmap-cell';
+  const intensity = Math.floor(Math.random() * heatColors.length);
+  cell.style.background = heatColors[intensity];
+  cell.innerHTML = `<div class="heatmap-tooltip">Gene ${i + 1} · FC: ${(Math.random() * 4).toFixed(2)}</div>`;
+  heatmapGrid.appendChild(cell);
+}
+
+/* ─── Detail Panel ─── */
+function openDetail(key) {
+  const data = detailData[key];
+  if (!data) return;
+  document.getElementById('detail-header').textContent = data.header;
+  document.getElementById('detail-title').textContent = data.title;
+  document.getElementById('detail-body').textContent = data.body;
+  document.getElementById('detail-metrics').innerHTML = data.metrics.map(m => 
+    `<div class="detail-metric"><span class="detail-metric-label">${m.label}</span><span class="detail-metric-value">${m.value}</span></div>`
+  ).join('');
+  document.getElementById('detail-panel').classList.add('open');
+
+  // On mobile, use Bootstrap offcanvas behavior
+  if (window.innerWidth < 768) {
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function closeDetail() {
+  document.getElementById('detail-panel').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+/* ─── Command Palette ─── */
+function togglePalette() {
+  const p = document.getElementById('palette');
+  p.classList.toggle('open');
+  if (p.classList.contains('open')) {
+    setTimeout(() => document.getElementById('palette-input').focus(), 100);
+  }
+}
+
+function closePalette() {
+  document.getElementById('palette').classList.remove('open');
+}
+
+function jumpTo(id) {
+  closePalette();
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { closeDetail(); closePalette(); }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); togglePalette(); }
+});
+
+/* ─── Parallax Tracks (reduced on mobile) ─── */
+const tracks = document.querySelectorAll('.track');
+window.addEventListener('scroll', () => {
+  const scrollY = window.scrollY;
+  tracks.forEach((track, i) => {
+    const speed = isTouch ? 0.1 : (0.5 + (i * 0.1));
+    const offset = scrollY * speed * 0.05;
+    track.style.transform = `translateY(${offset}px)`;
+  });
+}, { passive: true });
+
+/* ─── Smooth Scroll for Anchor Links ─── */
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+  anchor.addEventListener('click', function(e) {
+    const href = this.getAttribute('href');
+    if (href !== '#') {
+      e.preventDefault();
+      const target = document.querySelector(href);
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+});
+
+/* ─── Touch Swipe for Detail Panel ─── */
+let touchStartX = 0;
+let touchEndX = 0;
+
+document.addEventListener('touchstart', (e) => {
+  touchStartX = e.changedTouches[0].screenX;
+}, { passive: true });
+
+document.addEventListener('touchend', (e) => {
+  touchEndX = e.changedTouches[0].screenX;
+  handleSwipe();
+}, { passive: true });
+
+function handleSwipe() {
+  const detailPanel = document.getElementById('detail-panel');
+  if (detailPanel.classList.contains('open') && touchEndX < touchStartX - 50) {
+    closeDetail();
+  }
+}
+
+/* ─── Active Nav Link on Scroll ─── */
+const sections = document.querySelectorAll('section[id], div[id]');
+const navLinks = document.querySelectorAll('.nav-link');
+
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(section => {
+    const sectionTop = section.offsetTop;
+    if (scrollY >= sectionTop - 200) {
+      current = section.getAttribute('id');
+    }
+  });
+
+  navLinks.forEach(link => {
+    link.classList.remove('active');
+    if (link.getAttribute('href') === '#' + current) {
+      link.classList.add('active');
+    }
+  });
+}, { passive: true });
+
+/* ─── Console Welcome ─── */
+console.log('%c GeneX v4.0 ', 'background: #2D5016; color: #FAFAF7; padding: 4px 8px; border-radius: 4px; font-family: monospace;');
+console.log('%c Genomic Intelligence Platform ', 'color: #888; font-family: monospace;');
+</script>
+</body>
+</html>
